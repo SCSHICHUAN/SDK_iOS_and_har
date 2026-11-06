@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ (API 31+) 专用主题：把系统启动画面调成白底 + 透明图标，无缝过渡到自定义封面 -->
+<resources>
+
+    <style name="Theme.AndroidPro" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#FFFFFF</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+    </style>
+</resources>

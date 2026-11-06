@@ -1,0 +1,74 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# IDE / editors
+.idea/
+**/.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*~
+
+# CMake / native build outputs
+out/core/
+cmake-build-*/
+build/
+**/CMakeCache.txt
+**/CMakeFiles/
+**/cmake_install.cmake
+**/Makefile
+**/compile_commands.json
+*.o
+*.obj
+*.a
+!**/libs/**/*.a
+*.so
+*.dylib
+*.exe
+*.out
+
+# Android (Gradle)
+**/.gradle/
+**/local.properties
+**/captures/
+**/.externalNativeBuild/
+**/.cxx/
+**/app/build/
+**/build/
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# HarmonyOS / OpenHarmony
+**/.hvigor/
+.hvigor/
+**/oh_modules/
+**/*.hap
+**/*.app
+**/BuildProfile.ets
+**/entry/build/
+**/node_modules/
+
+# iOS / Xcode
+**/DerivedData/
+**/*.xcuserdata/
+**/*.xcworkspace/xcuserdata/
+**/xcuserdata/
+**/*.xcodeproj/project.xcworkspace/xcuserdata/
+**/*.xcodeproj/xcuserdata/
+**/Pods/
+**/.derivedData/
+*.ipa
+*.dSYM/
+*.moved-aside
+
+# Logs / temp
+*.log
+*.tmp
+*.temp
+.cache/
