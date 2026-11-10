@@ -3,10 +3,15 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 110;
+	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* Core.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* Core.xcframework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		A10000000000000000000002 /* Core.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Core.xcframework; path = Frameworks/Core.xcframework; sourceTree = "<group>"; };
 		E3CCF277309D6DAF00D4E62D /* iOSpro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iOSpro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -34,16 +39,28 @@
 /* Begin PBXFrameworksBuildPhase section */
 		E3CCF274309D6DAF00D4E62D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000001 /* Core.xcframework in Frameworks */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A10000000000000000000003 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000002 /* Core.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		E3CCF26E309D6DAF00D4E62D = {
 			isa = PBXGroup;
 			children = (
 				E3CCF279309D6DAF00D4E62D /* iOSpro */,
+				A10000000000000000000003 /* Frameworks */,
 				E3CCF278309D6DAF00D4E62D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -69,10 +86,14 @@
 			);
 			buildRules = (
 			);
+			dependencies = (
+			);
 			fileSystemSynchronizedGroups = (
 				E3CCF279309D6DAF00D4E62D /* iOSpro */,
 			);
 			name = iOSpro;
+			packageProductDependencies = (
+			);
 			productName = iOSpro;
 			productReference = E3CCF277309D6DAF00D4E62D /* iOSpro.app */;
 			productType = "com.apple.product-type.application";
@@ -114,21 +135,25 @@
 /* Begin PBXResourcesBuildPhase section */
 		E3CCF275309D6DAF00D4E62D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
 			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		E3CCF273309D6DAF00D4E62D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
 			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		E3CCF28B309D6DAF00D4E62D /* Debug configuration for PBXNativeTarget "iOSpro" */ = {
+		E3CCF28B309D6DAF00D4E62D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -136,6 +161,11 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3JXF3ZZ9G5;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Frameworks",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iOSpro/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -143,12 +173,16 @@
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 15;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lc++",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = "usb-ios.iOSpro";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -161,7 +195,7 @@
 			};
 			name = Debug;
 		};
-		E3CCF28C309D6DAF00D4E62D /* Release configuration for PBXNativeTarget "iOSpro" */ = {
+		E3CCF28C309D6DAF00D4E62D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -169,6 +203,11 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3JXF3ZZ9G5;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Frameworks",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iOSpro/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -176,12 +215,16 @@
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 15;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lc++",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = "usb-ios.iOSpro";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -194,7 +237,7 @@
 			};
 			name = Release;
 		};
-		E3CCF28D309D6DAF00D4E62D /* Debug configuration for PBXProject "iOSpro" */ = {
+		E3CCF28D309D6DAF00D4E62D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -247,7 +290,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -258,7 +301,7 @@
 			};
 			name = Debug;
 		};
-		E3CCF28E309D6DAF00D4E62D /* Release configuration for PBXProject "iOSpro" */ = {
+		E3CCF28E309D6DAF00D4E62D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -305,7 +348,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -321,21 +364,22 @@
 		E3CCF272309D6DAF00D4E62D /* Build configuration list for PBXProject "iOSpro" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				E3CCF28D309D6DAF00D4E62D /* Debug configuration for PBXProject "iOSpro" */,
-				E3CCF28E309D6DAF00D4E62D /* Release configuration for PBXProject "iOSpro" */,
+				E3CCF28D309D6DAF00D4E62D /* Debug */,
+				E3CCF28E309D6DAF00D4E62D /* Release */,
 			);
+			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		E3CCF28A309D6DAF00D4E62D /* Build configuration list for PBXNativeTarget "iOSpro" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				E3CCF28B309D6DAF00D4E62D /* Debug configuration for PBXNativeTarget "iOSpro" */,
-				E3CCF28C309D6DAF00D4E62D /* Release configuration for PBXNativeTarget "iOSpro" */,
+				E3CCF28B309D6DAF00D4E62D /* Debug */,
+				E3CCF28C309D6DAF00D4E62D /* Release */,
 			);
+			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
 	rootObject = E3CCF26F309D6DAF00D4E62D /* Project object */;
-	validationLevel = 1;
 }

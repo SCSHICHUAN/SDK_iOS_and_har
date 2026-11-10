@@ -37,8 +37,12 @@ android {
 }
 
 dependencies {
+    // Same module CreateAAR packages into AndroidSDK/core.aar (IDE-resolvable).
+    implementation(project(":coresdk"))
+
     implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.activity)
+    implementation(libs.androidx.actcompose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)

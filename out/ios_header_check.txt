@@ -1,0 +1,28 @@
+=== src header ===
+16:int core_hello_world(void);
+22:const char* core_hello_world_string(void);
+30:std::string core_hello_world_string_cpp();
+=== iOSpro framework header ===
+16:int core_hello_world(void);
+22:const char* core_hello_world_string(void);
+30:std::string core_hello_world_string_cpp();
+=== iOSSDK header ===
+16:int core_hello_world(void);
+22:const char* core_hello_world_string(void);
+30:std::string core_hello_world_string_cpp();
+=== staged a symbols ===
+000000000000002c T __Z27core_hello_world_string_cppv
+0000000000000000 T _core_hello_world
+0000000000000020 T _core_hello_world_string
+000000000000002c T __Z27core_hello_world_string_cppv
+0000000000000000 T _core_hello_world
+0000000000000020 T _core_hello_world_string
+=== framework binary symbols ===
+000000000000002c T __Z27core_hello_world_string_cppv
+0000000000000000 T _core_hello_world
+0000000000000020 T _core_hello_world_string
+=== ViewController ===
+30:        let code = core_hello_world()
+31:        let text = String(cString: core_hello_world_string())
+33:            ? "core_hello_world() => \(code)\ncore_hello_world_string() => \(text)"
+34:            : "core_hello_world() failed: \(code)"

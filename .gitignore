@@ -66,6 +66,13 @@ build/
 *.ipa
 *.dSYM/
 *.moved-aside
+app/iOS/FrameworkCreate/build/
+out/iOS/a/.cmake/
+app/Android/SoCreate/build/
+out/Android/a/.cmake/
+app/HarmonyOS/SoCreate/build/
+out/HarmonyOS/a/.cmake/
+
 
 # Logs / temp
 *.log

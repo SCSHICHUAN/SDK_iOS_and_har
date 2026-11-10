@@ -19,8 +19,17 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Distributable AAR also published here by CreateAAR.
+        maven {
+            url = uri("${rootDir}/../AndroidSDK/maven")
+        }
     }
 }
 
 rootProject.name = "androidPro"
 include(":app")
+
+// Dev/IDE: same sources that CreateAAR packages into AndroidSDK/core.aar
+include(":coresdk")
+project(":coresdk").projectDir =
+    file("../../../app/Android/CreateAAR/project/core")

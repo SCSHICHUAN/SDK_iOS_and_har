@@ -24,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.androidpro.ui.theme.AndroidProTheme
+import com.example.coresdk.CoreNative
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -51,7 +52,7 @@ class MainActivity : ComponentActivity() {
                     isLoggedIn -> Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                         FirstScreen(modifier = Modifier.padding(innerPadding))
                     }
-                    else -> LoginScreen()                      // 未登录 → 登录页
+                    else ->   FirstScreen()               // 未登录 → 登录页
                 }
             }
         }
@@ -59,7 +60,12 @@ class MainActivity : ComponentActivity() {
 
     // 初始化：行业主流里这里放 SDK 初始化 / 登录检查 / 拉配置 / 预加载
     private suspend fun initApp() {
-        delay(300) // 模拟初始化耗时，以后换成真实任务
+        // Call shared C core via JNI
+        val code = CoreNative.helloWorld()
+        val text = CoreNative.helloWorldString()
+        android.util.Log.i("CoreNative", "core_hello_world() => $code")
+        android.util.Log.i("CoreNative", "core_hello_world_string() => $text")
+        delay(300)
     }
 }
 
@@ -82,6 +88,7 @@ fun SplashScreen() {
 @Composable
 fun FirstScreen(modifier: Modifier = Modifier) {
     var count by remember { mutableStateOf(0) }
+    var coreMsg by remember { mutableStateOf("core not called") }
 
     Column(
         modifier = modifier.fillMaxSize().padding(24.dp),
@@ -90,28 +97,22 @@ fun FirstScreen(modifier: Modifier = Modifier) {
     ) {
         Text("你好，安卓！", fontSize = 28.sp)
         Spacer(Modifier.height(16.dp))
+        Text(coreMsg, fontSize = 16.sp)
+        Spacer(Modifier.height(16.dp))
         Text("你点了 $count 次", fontSize = 18.sp)
         Spacer(Modifier.height(16.dp))
-        Button(onClick = { count++ }) {
-            Text("点我 +1")
+        Button(onClick = {
+            val code = CoreNative.helloWorld()
+            val text = CoreNative.helloWorldString()
+            coreMsg = text
+            count++
+        }) {
+            Text("点我调用 core")
         }
     }
 }
 
-@Composable
-fun LoginScreen() {
-    // 登录页占位：未登录时跳到这（以后做真实登录）
-    Box(
-        modifier = Modifier.fillMaxSize().background(Color.White),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("请登录", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text("（占位页，以后接真实登录）", fontSize = 14.sp, color = Color.Gray)
-        }
-    }
-}
+
 
 @Preview(showBackground = true)
 @Composable

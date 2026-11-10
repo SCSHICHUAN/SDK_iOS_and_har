@@ -1,26 +1,45 @@
+import { helloWorld, helloWorldString } from '@sdk/core';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN: number = 0x0000;
+
 @Entry
 @Component
 struct Index {
-  @State private showSplash: boolean = true;   // 启动页开关
-  private initDone: boolean = false;           // 初始化完成标记
-  private startTime: number = 0;               // 启动时刻
+  @State private showSplash: boolean = true;
+  @State private coreMsg: string = 'core not called';
+  private initDone: boolean = false;
+  private startTime: number = 0;
 
   aboutToAppear(): void {
     this.startTime = Date.now();
     this.initApp();
   }
 
-  // 模拟初始化：数据库 / 登录态 / SDK，完成后进 maybeEnter
+  private callCore(): string {
+    const ret: number = helloWorld();
+    const text: string = helloWorldString();
+    hilog.info(DOMAIN, 'CoreNapi', 'helloWorld => %{public}d', ret);
+    hilog.info(DOMAIN, 'CoreNapi', 'helloWorldString => %{public}s', text);
+    return `core_hello_world() => ${ret}\ncore_hello_world_string() => ${text}`;
+  }
+
   private initApp(): void {
+    try {
+      this.coreMsg = this.callCore();
+    } catch (err) {
+      const msg: string = err instanceof Error ? err.message : JSON.stringify(err);
+      this.coreMsg = `core call failed: ${msg}`;
+      hilog.error(DOMAIN, 'CoreNapi', 'helloWorld failed: %{public}s', msg);
+    }
     setTimeout(() => {
       this.initDone = true;
       this.maybeEnter();
-    }, 300);   // 实际替换成你的异步初始化
+    }, 300);
   }
 
-  // 双条件：初始化完成 && 展示 ≥ 1.5s，才进主界面
   private maybeEnter(): void {
-    const remain = Math.max(0, 1500 - (Date.now() - this.startTime));
+    const remain: number = Math.max(0, 1500 - (Date.now() - this.startTime));
     setTimeout(() => {
       this.showSplash = false;
     }, remain);
@@ -28,7 +47,6 @@ struct Index {
 
   build() {
     if (this.showSplash) {
-      // ===== 启动页：iOS LaunchScreen 样式 =====
       Column() {
         Text('harmonyOSpro')
           .fontSize(40)
@@ -38,18 +56,30 @@ struct Index {
       }
       .width('100%')
       .height('100%')
-      .justifyContent(FlexAlign.Center)      // 垂直居中
-      .alignItems(HorizontalAlign.Center)    // 水平居中
-      .backgroundColor('#FFFFFF')            // 纯白底
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .backgroundColor('#FFFFFF')
     } else {
-      // ===== 主界面（占位） =====
-      Column() {
+      Column({ space: 12 }) {
         Text('主界面')
           .fontSize(20)
+        Text(this.coreMsg)
+          .fontSize(16)
+          .fontColor('#333333')
+        Button('再调用 core')
+          .onClick(() => {
+            try {
+              this.coreMsg = this.callCore();
+            } catch (err) {
+              const msg: string = err instanceof Error ? err.message : JSON.stringify(err);
+              this.coreMsg = `core call failed: ${msg}`;
+            }
+          })
       }
       .width('100%')
       .height('100%')
       .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
     }
   }
 }

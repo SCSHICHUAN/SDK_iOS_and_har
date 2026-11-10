@@ -1,0 +1,9 @@
+{
+  "name": "@sdk/core",
+  "version": "1.0.0",
+  "description": "Shared core native SDK for HarmonyOS",
+  "main": "Index.ets",
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {}
+}
