@@ -7,7 +7,7 @@
 - `Headers/`：umbrella `Core.h` + `module.modulemap`（Swift 可 `import Core`）
 - `Info.plist`：framework 元数据
 - `scripts/package_xcframework.sh`：device/sim `.a` → `Core.xcframework`
-- `scripts/run_iospro.sh`：编译并启动 `out/iOS/iOSpro`
+- `scripts/run_iospro.sh`：编译并启动 `release/iOS/iOSpro`
 - `build/`：打包中间产物（可删）
 
 ## 一键入口
@@ -20,7 +20,7 @@
 
 流程：
 
-1. toolchain 直接编 `.a` → `out/iOS/a/iphoneos` + `out/iOS/a/iphonesimulator`
-2. 打 XCFramework → `out/iOS/iOSSDK/Core.xcframework`
-3. 安装到 → `out/iOS/iOSpro/Frameworks/Core.xcframework`
+1. toolchain 直接编 `.a` → `release/iOS/a/iphoneos` + `release/iOS/a/iphonesimulator`
+2. 打 XCFramework → `release/iOS/iOSSDK/Core.xcframework`
+3. 安装到 → `release/iOS/iOSpro/Frameworks/Core.xcframework`
 4. 编译 `iOSpro` 并启动模拟器

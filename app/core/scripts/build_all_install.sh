@@ -35,9 +35,9 @@ echo "-------- HarmonyOS --------"
 echo
 
 echo "✅ build_all_install done."
-echo "    iOS:     out/iOS/iOSSDK + iOSpro"
-echo "    Android: out/Android/AndroidSDK + androidPro"
-echo "    OHOS:    out/HarmonyOS/HarmonySDK + harmonyOSpro"
+echo "    iOS:     release/iOS/iOSSDK + iOSpro"
+echo "    Android: release/Android/AndroidSDK + androidPro"
+echo "    OHOS:    release/HarmonyOS/HarmonySDK + harmonyOSpro"
 if [[ "${SKIP_RUN}" == "1" ]]; then
   echo "    (Pro not launched; RUN_PRO=1 to also run)"
 fi

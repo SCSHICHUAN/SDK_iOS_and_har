@@ -33,11 +33,22 @@ if [[ ! -d "${HEADERS}" ]]; then
   exit 1
 fi
 
-# Point HAR native build at the prebuilt static library.
+# Point HAR native build at the prebuilt static library (+ Assimp when present).
+REPO_ROOT="$(cd "${CREATE_HAR}/../../.." && pwd)"
+ASSIMP_A="${ASSIMP_A_PATH:-${REPO_ROOT}/src/libs/assimp/ohos/${ARCH}/libassimp.a}"
 cat > "${CPP_DIR}/core_paths.cmake" <<EOF
 set(CORE_A_PATH "${CORE_A}" CACHE FILEPATH "" FORCE)
 set(CORE_INCLUDE "${HEADERS}" CACHE PATH "" FORCE)
 EOF
+if [[ -f "${ASSIMP_A}" ]]; then
+  cat >> "${CPP_DIR}/core_paths.cmake" <<EOF
+set(CORE_ENABLE_GL ON CACHE BOOL "" FORCE)
+set(ASSIMP_A_PATH "${ASSIMP_A}" CACHE FILEPATH "" FORCE)
+EOF
+  echo "    GL: ${ASSIMP_A}"
+else
+  echo "    GL: skip (missing ${ASSIMP_A})"
+fi
 
 # Restrict ABI to the slice we just built.
 cat > "${CORE_MODULE}/build-profile.json5" <<EOF

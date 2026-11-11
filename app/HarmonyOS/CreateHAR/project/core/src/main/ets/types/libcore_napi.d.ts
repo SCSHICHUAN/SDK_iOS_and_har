@@ -2,6 +2,22 @@ declare module 'libcore_napi.so' {
   interface CoreNapi {
     helloWorld(): number;
     helloWorldString(): string;
+    glSetModelPath(path: string): void;
+    glSetModelData(data: ArrayBuffer | Uint8Array): void;
+    glPresentAll(): void;
+    glOrbitAll(dx: number, dy: number): void;
+    glDollyAll(amount: number): void;
+    glLightMoveXAll(amount: number): void;
+    glLightDragAll(dx: number, dy: number): void;
+    glViewerCreate(): bigint;
+    glViewerDestroy(handle: bigint): void;
+    glViewerLoad(handle: bigint, path: string): number;
+    glViewerResize(handle: bigint, width: number, height: number): void;
+    glViewerRender(handle: bigint): void;
+    glViewerOrbit(handle: bigint, dx: number, dy: number): void;
+    glViewerZoom(handle: bigint, scale: number): void;
+    glViewerDolly(handle: bigint, amount: number): void;
+    glViewerLightMoveX(handle: bigint, amount: number): void;
   }
   const coreNapi: CoreNapi;
   export default coreNapi;

@@ -1,1 +1,20 @@
-export { helloWorld, helloWorldString } from './src/main/ets/Index';
+export {
+  helloWorld,
+  helloWorldString,
+  glSetModelPath,
+  glSetModelData,
+  glPresentAll,
+  glOrbitAll,
+  glDollyAll,
+  glLightMoveXAll,
+  glLightDragAll,
+  glViewerCreate,
+  glViewerDestroy,
+  glViewerLoad,
+  glViewerResize,
+  glViewerRender,
+  glViewerOrbit,
+  glViewerZoom,
+  glViewerDolly,
+  glViewerLightMoveX,
+} from './src/main/ets/Index';

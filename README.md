@@ -34,6 +34,8 @@ app/
 │       ├── build_ios.sh                 ← 一键：.a → xcframework → iOSpro
 │       ├── build_android.sh             ← 一键：.a → aar → androidPro
 │       ├── build_ohos.sh                ← 一键：.a → har → harmonyOSpro
+│       ├── build_assimp_android.sh      ← Assimp 源码 → android/<abi>/libassimp.a
+│       ├── build_assimp_ohos.sh         ← Assimp 源码 → ohos/<arch>/libassimp.a
 │       ├── build_host.sh                ← 本机编 .a 冒烟
 │       └── clean_ios.sh                 ← 清 iOS 中间物 / DerivedData
 │
@@ -75,10 +77,10 @@ app/
 |------|-----|---------|-------------|
 | 源码 | `src/` 同一份 | 同左 | 同左 |
 | 编库工具 | `ios.toolchain` | `android.toolchain`（内部转调 NDK） | `ohos.toolchain` |
-| 静态库 | `out/iOS/a/.../core.a` | `out/Android/a/.../core.a` | `out/HarmonyOS/a/.../core.a` |
+| 静态库 | `release/iOS/a/.../core.a` | `release/Android/a/.../core.a` | `release/HarmonyOS/a/.../core.a` |
 | 中间体 | Framework 切片 | `libcore_jni.so` | `libcore_napi.so` |
 | 分发 SDK | `Core.xcframework` | `core.aar` | `core.har` |
-| Pro | `out/iOS/iOSpro` | `out/Android/androidPro` | `out/HarmonyOS/harmonyOSpro` |
+| Pro | `release/iOS/iOSpro` | `release/Android/androidPro` | `release/HarmonyOS/harmonyOSpro` |
 
 - iOS：`.a` 直接装进 Framework → XCFramework（无打包工程）。
 - Android / 鸿蒙：`.a` 先链进 `.so`（JNI / NAPI），再打进 AAR / HAR（有打包工程）。
@@ -92,7 +94,8 @@ app/iOS/FrameworkCreate/     .a → XCFramework
 app/Android/SoCreate/        .a → .so
 app/Android/CreateAAR/       .so → .aar
 app/HarmonyOS/CreateHAR/     .a → .har（内含 NAPI）
-out/<Platform>/{a, *SDK, *pro}/
+release/<Platform>/{a, *SDK, *pro}/   ← 交付产物
+debug/                       ← 构建日志 / 临时调试输出
 ```
 
 ---
@@ -124,9 +127,9 @@ RUN_PRO=1 ./app/core/scripts/build_all_install.sh   # 连 Pro 一起跑
 
 | | `.a` | SDK | Pro |
 |--|------|-----|-----|
-| iOS | `out/iOS/a/{iphoneos,iphonesimulator}/core.a` | `out/iOS/iOSSDK/Core.xcframework` | `out/iOS/iOSpro` |
-| Android | `out/Android/a/<abi>/core.a` | `out/Android/AndroidSDK/core.aar` | `out/Android/androidPro` |
-| Harmony | `out/HarmonyOS/a/<arch>/core.a` | `out/HarmonyOS/HarmonySDK/core.har` | `out/HarmonyOS/harmonyOSpro` |
+| iOS | `release/iOS/a/{iphoneos,iphonesimulator}/core.a` | `release/iOS/iOSSDK/Core.xcframework` | `release/iOS/iOSpro` |
+| Android | `release/Android/a/<abi>/core.a` | `release/Android/AndroidSDK/core.aar` | `release/Android/androidPro` |
+| Harmony | `release/HarmonyOS/a/<arch>/core.a` | `release/HarmonyOS/HarmonySDK/core.har` | `release/HarmonyOS/harmonyOSpro` |
 
 ### API（`src/include/core/core.h`）
 
@@ -150,8 +153,8 @@ const char* core_hello_world_string(void);   // 勿 free
 ```
 build_*.sh
   │
-  ├─ cmake(+toolchain) ──────────────► out/*/a/core.a
-  ├─ package_*.sh ───────────────────► out/*/*SDK/
+  ├─ cmake(+toolchain) ──────────────► release/*/a/core.a
+  ├─ package_*.sh ───────────────────► release/*/*SDK/
   │     iOS:    package_xcframework.sh
   │     Android: package_aar.sh → package_so.sh
   │     OHOS:   package_har.sh

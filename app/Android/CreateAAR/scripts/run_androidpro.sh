@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
-PRO_DIR="${REPO_ROOT}/out/Android/androidPro"
+PRO_DIR="${REPO_ROOT}/release/Android/androidPro"
 SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
 ADB="${SDK_ROOT}/platform-tools/adb"
 STUDIO="/Applications/Android Studio.app/Contents"

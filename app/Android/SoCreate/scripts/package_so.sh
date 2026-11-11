@@ -17,6 +17,16 @@ BUILD_DIR="${SO_ROOT}/build/${ABI}"
 TOOLCHAIN="${NDK}/build/cmake/android.toolchain.cmake"
 JOBS="$(sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
 
+REPO_ROOT="$(cd "${SO_ROOT}/../../.." && pwd)"
+ASSIMP_A="${ASSIMP_A_PATH:-${REPO_ROOT}/src/libs/assimp/android/${ABI}/libassimp.a}"
+GL_ARGS=()
+if [[ -f "${ASSIMP_A}" ]]; then
+  GL_ARGS+=(-DCORE_ENABLE_GL=ON "-DASSIMP_A_PATH=${ASSIMP_A}")
+  echo "    GL: link ${ASSIMP_A}"
+else
+  echo "    GL: skip (missing ${ASSIMP_A})"
+fi
+
 rm -rf "${BUILD_DIR}"
 cmake -S "${SO_ROOT}" -B "${BUILD_DIR}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
@@ -25,7 +35,8 @@ cmake -S "${SO_ROOT}" -B "${BUILD_DIR}" \
   -DANDROID_STL=c++_static \
   -DCMAKE_BUILD_TYPE=Release \
   -DCORE_A_PATH="${CORE_A}" \
-  -DCORE_INCLUDE="${HEADERS}"
+  -DCORE_INCLUDE="${HEADERS}" \
+  "${GL_ARGS[@]}"
 
 cmake --build "${BUILD_DIR}" -j"${JOBS}"
 

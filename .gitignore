@@ -13,7 +13,7 @@
 *~
 
 # CMake / native build outputs
-out/core/
+release/core/
 cmake-build-*/
 build/
 **/CMakeCache.txt
@@ -24,7 +24,8 @@ build/
 *.o
 *.obj
 *.a
-!**/libs/**/*.a
+# Do NOT re-include prebuilt static libs — assimp android .a alone is 200MB+ (GitHub 100MB hard limit).
+# Keep local src/libs/assimp/**/*.a for builds; they stay untracked.
 *.so
 *.dylib
 *.exe
@@ -67,14 +68,18 @@ build/
 *.dSYM/
 *.moved-aside
 app/iOS/FrameworkCreate/build/
-out/iOS/a/.cmake/
+release/iOS/a/.cmake/
 app/Android/SoCreate/build/
-out/Android/a/.cmake/
+release/Android/a/.cmake/
 app/HarmonyOS/SoCreate/build/
-out/HarmonyOS/a/.cmake/
+release/HarmonyOS/a/.cmake/
 
 
-# Logs / temp
+# Logs / temp (debug/ holds agent/build logs; keep dir, ignore noise)
+debug/**/*.log
+debug/**/*.jpeg
+debug/**/*.png
+debug/third_party/
 *.log
 *.tmp
 *.temp

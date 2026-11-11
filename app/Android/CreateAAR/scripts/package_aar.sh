@@ -157,7 +157,7 @@ cat > "${MAVEN_DIR}/core-1.0.0.pom" <<'EOF'
 EOF
 
 # Convenience copy into androidPro/app/libs for Studio visibility.
-PRO_LIBS="${REPO_ROOT}/out/Android/androidPro/app/libs"
+PRO_LIBS="${REPO_ROOT}/release/Android/androidPro/app/libs"
 mkdir -p "${PRO_LIBS}"
 cp "${AAR}" "${PRO_LIBS}/core.aar"
 

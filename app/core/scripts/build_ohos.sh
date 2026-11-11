@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # HarmonyOS pipeline (mirror iOS):
-#   1) OHOS toolchain → out/HarmonyOS/a/<arch>/core.a
-#   2) CreateHAR → out/HarmonyOS/HarmonySDK/core.har
+#   1) OHOS toolchain → release/HarmonyOS/a/<arch>/core.a
+#   2) CreateHAR → release/HarmonyOS/HarmonySDK/core.har
 #   3) install har into harmonyOSpro (oh-package file dependency)
 #   4) build HAP & launch
 set -euo pipefail
@@ -13,9 +13,9 @@ CREATE_HAR="${REPO_ROOT}/app/HarmonyOS/CreateHAR"
 PACKAGE_SCRIPT="${CREATE_HAR}/scripts/package_har.sh"
 INSTALL_SCRIPT="${CREATE_HAR}/scripts/install_harmonypro.sh"
 RUN_SCRIPT="${CREATE_HAR}/scripts/run_harmonypro.sh"
-A_OUT="${REPO_ROOT}/out/HarmonyOS/a"
-SDK_OUT="${REPO_ROOT}/out/HarmonyOS/HarmonySDK"
-PRO_DIR="${REPO_ROOT}/out/HarmonyOS/harmonyOSpro"
+A_OUT="${REPO_ROOT}/release/HarmonyOS/a"
+SDK_OUT="${REPO_ROOT}/release/HarmonyOS/HarmonySDK"
+PRO_DIR="${REPO_ROOT}/release/HarmonyOS/harmonyOSpro"
 HEADERS_DIR="${REPO_ROOT}/src/include"
 TOOLCHAIN="${CORE_DIR}/cmake/toolchains/ohos.toolchain.cmake"
 JOBS="$(sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
@@ -27,7 +27,7 @@ if [[ -z "${OHOS_NDK:-${HOS_SDK_HOME:-${OHOS_SDK_HOME:-}}}" ]]; then
   fi
 fi
 
-echo "==> [1/4] Build core.a → out/HarmonyOS/a/${ARCH}"
+echo "==> [1/4] Build core.a → release/HarmonyOS/a/${ARCH}"
 CMAKE_DIR="${A_OUT}/.cmake/${ARCH}"
 SLICE_DIR="${A_OUT}/${ARCH}"
 mkdir -p "${SLICE_DIR}" "${CMAKE_DIR}"
@@ -36,6 +36,7 @@ cmake -S "${CORE_DIR}" -B "${CMAKE_DIR}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
   -DOHOS_ARCH="${ARCH}" \
   -DCMAKE_BUILD_TYPE=Release \
+  -DCORE_ENABLE_GL=ON \
   -DCORE_BUILD_EXAMPLES=OFF \
   -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY="${SLICE_DIR}"
 
@@ -71,7 +72,7 @@ else
   "${RUN_SCRIPT}"
 fi
 
-echo "✅ HarmonyOS pipeline done."
+echo "***** 🍺🍺🍺 BUILD SUCCEEDED 🍺🍺🍺 *****"
 echo "    a:   ${A_OUT}/${ARCH}/core.a"
 echo "    har: ${SDK_OUT}/core.har"
 echo "    pro: ${PRO_DIR}"

@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
-PRO_DIR="${REPO_ROOT}/out/HarmonyOS/harmonyOSpro"
+PRO_DIR="${REPO_ROOT}/release/HarmonyOS/harmonyOSpro"
 DEVECO="/Applications/DevEco-Studio.app/Contents"
 export DEVECO_SDK_HOME="${DEVECO_SDK_HOME:-$DEVECO/sdk}"
 # Prefer DevEco bundled JBR so hap packaging does not require a system JRE.

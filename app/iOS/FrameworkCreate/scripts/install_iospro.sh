@@ -8,8 +8,8 @@ set -euo pipefail
 SRC_XCF="${1:?Core.xcframework required}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
-SDK_OUT="${2:-${REPO_ROOT}/out/iOS/iOSSDK}"
-PRO_DIR="${3:-${REPO_ROOT}/out/iOS/iOSpro}"
+SDK_OUT="${2:-${REPO_ROOT}/release/iOS/iOSSDK}"
+PRO_DIR="${3:-${REPO_ROOT}/release/iOS/iOSpro}"
 PBXPROJ="${PRO_DIR}/iOSpro.xcodeproj/project.pbxproj"
 
 if [[ ! -d "${SRC_XCF}" ]]; then

@@ -3,7 +3,7 @@ set -euo pipefail
 
 CORE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_ROOT="$(cd "${CORE_DIR}/../.." && pwd)"
-BUILD_DIR="${REPO_ROOT}/out/core/host"
+BUILD_DIR="${REPO_ROOT}/release/core/host"
 
 cmake -S "${CORE_DIR}" -B "${BUILD_DIR}" \
   -DCMAKE_BUILD_TYPE=Release \

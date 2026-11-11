@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
-PROJECT_DIR="${REPO_ROOT}/out/iOS/iOSpro"
+PROJECT_DIR="${REPO_ROOT}/release/iOS/iOSpro"
 DERIVED="${PROJECT_DIR}/.derivedData"
 SCHEME="iOSpro"
 BUNDLE_ID="usb-ios.iOSpro"
@@ -64,9 +64,9 @@ if [[ -z "${APP_PATH}" ]]; then
 fi
 
 echo "Installing ${APP_PATH}"
-xcrun simctl uninstall "${DEVICE_ID}" "${BUNDLE_ID}" >/dev/null 2>&1 || true
+# Overwrite in place (like adb install -r); do not uninstall first.
 xcrun simctl install "${DEVICE_ID}" "${APP_PATH}"
-xcrun simctl launch --console-pty "${DEVICE_ID}" "${BUNDLE_ID}" || \
-  xcrun simctl launch "${DEVICE_ID}" "${BUNDLE_ID}"
+# Do not use --console-pty: it attaches and blocks the shell (unlike Android/OHOS).
+xcrun simctl launch "${DEVICE_ID}" "${BUNDLE_ID}"
 
 echo "Launched ${BUNDLE_ID} on ${DEVICE_NAME}"

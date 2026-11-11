@@ -17,6 +17,20 @@ if(NOT DEFINED CORE_INCLUDE OR NOT IS_DIRECTORY "${CORE_INCLUDE}")
   message(FATAL_ERROR "CORE_INCLUDE missing.")
 endif()
 
+option(CORE_ENABLE_GL "Link Assimp + GLES for GL viewer in JNI" OFF)
+
 add_library(core_jni SHARED core_jni.cpp)
 target_include_directories(core_jni PRIVATE "${CORE_INCLUDE}")
 target_link_libraries(core_jni PRIVATE "${CORE_A_PATH}" log)
+
+if(CORE_ENABLE_GL)
+  if(NOT DEFINED ASSIMP_A_PATH OR NOT EXISTS "${ASSIMP_A_PATH}")
+    message(FATAL_ERROR "CORE_ENABLE_GL=ON requires ASSIMP_A_PATH")
+  endif()
+  target_compile_definitions(core_jni PRIVATE CORE_ENABLE_GL=1)
+  target_link_libraries(core_jni PRIVATE
+    -Wl,--whole-archive "${ASSIMP_A_PATH}" -Wl,--no-whole-archive
+    GLESv3
+    z
+  )
+endif()

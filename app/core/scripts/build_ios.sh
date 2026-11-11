@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # iOS pipeline:
-#   1) toolchain 直接编 core.a → out/iOS/a/{iphoneos,iphonesimulator}/
-#   2) 打成 Core.xcframework → out/iOS/iOSSDK/
-#   3) 安装到 out/iOS/iOSpro/Frameworks/
+#   1) toolchain 直接编 core.a → release/iOS/a/{iphoneos,iphonesimulator}/
+#   2) 打成 Core.xcframework → release/iOS/iOSSDK/
+#   3) 安装到 release/iOS/iOSpro/Frameworks/
 #   4) 编译并启动 iOSpro 模拟器
 set -euo pipefail
 
@@ -11,14 +11,14 @@ REPO_ROOT="$(cd "${CORE_DIR}/../.." && pwd)"
 FW_CREATE="${REPO_ROOT}/app/iOS/FrameworkCreate"
 PACKAGE_SCRIPT="${FW_CREATE}/scripts/package_xcframework.sh"
 INSTALL_SCRIPT="${FW_CREATE}/scripts/install_iospro.sh"
-IOS_A_OUT="${REPO_ROOT}/out/iOS/a"
-IOS_SDK_OUT="${REPO_ROOT}/out/iOS/iOSSDK"
-IOS_PRO="${REPO_ROOT}/out/iOS/iOSpro"
+IOS_A_OUT="${REPO_ROOT}/release/iOS/a"
+IOS_SDK_OUT="${REPO_ROOT}/release/iOS/iOSSDK"
+IOS_PRO="${REPO_ROOT}/release/iOS/iOSpro"
 HEADERS_DIR="${REPO_ROOT}/src/include"
 STAGE_XCF="${IOS_A_OUT}/.stage/Core.xcframework"
 JOBS="$(sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
 
-# platform: OS64|SIMULATORARM64  →  slice dir name under out/iOS/a
+# platform: OS64|SIMULATORARM64  →  slice dir name under release/iOS/a
 build_core_a() {
   local platform="$1"
   local slice="$2"
@@ -33,6 +33,7 @@ build_core_a() {
     -DCORE_IOS_PLATFORM="${platform}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCORE_BUILD_EXAMPLES=OFF \
+    -DCORE_ENABLE_GL=ON \
     -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY="${slice_dir}" \
     >&2
 
@@ -49,16 +50,16 @@ build_core_a() {
     exit 1
   fi
 
-  # 统一落到 out/iOS/a/<slice>/core.a
+  # 统一落到 release/iOS/a/<slice>/core.a
   cp -f "${art}" "${slice_dir}/core.a"
   printf '%s\n' "${slice_dir}/core.a"
 }
 
-echo "==> [1/4] Build core.a → out/iOS/a/iphoneos"
+echo "==> [1/4] Build core.a → release/iOS/a/iphoneos"
 DEVICE_A="$(build_core_a OS64 iphoneos)"
 echo "    ${DEVICE_A}"
 
-echo "==> [2/4] Build core.a → out/iOS/a/iphonesimulator"
+echo "==> [2/4] Build core.a → release/iOS/a/iphonesimulator"
 SIM_A="$(build_core_a SIMULATORARM64 iphonesimulator)"
 echo "    ${SIM_A}"
 
@@ -86,4 +87,5 @@ else
   "${FW_CREATE}/scripts/run_iospro.sh"
 fi
 
-echo "✅ iOS pipeline done."
+echo "***** 🍺🍺🍺 BUILD SUCCEEDED 🍺🍺🍺 *****"
+echo "    iOS pipeline done."

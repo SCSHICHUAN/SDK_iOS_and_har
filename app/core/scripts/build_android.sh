@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Android pipeline (mirror iOS / HarmonyOS):
-#   1) repo android.toolchain → out/Android/a/<abi>/core.a
-#   2) CreateAAR → out/Android/AndroidSDK/core.aar
+#   1) repo android.toolchain → release/Android/a/<abi>/core.a
+#   2) CreateAAR → release/Android/AndroidSDK/core.aar
 #   3) install aar into androidPro
 #   4) build & launch androidPro
 set -euo pipefail
@@ -14,9 +14,9 @@ CREATE_AAR="${REPO_ROOT}/app/Android/CreateAAR"
 PACKAGE_SCRIPT="${CREATE_AAR}/scripts/package_aar.sh"
 INSTALL_SCRIPT="${CREATE_AAR}/scripts/install_androidpro.sh"
 RUN_SCRIPT="${CREATE_AAR}/scripts/run_androidpro.sh"
-A_OUT="${REPO_ROOT}/out/Android/a"
-SDK_OUT="${REPO_ROOT}/out/Android/AndroidSDK"
-PRO_DIR="${REPO_ROOT}/out/Android/androidPro"
+A_OUT="${REPO_ROOT}/release/Android/a"
+SDK_OUT="${REPO_ROOT}/release/Android/AndroidSDK"
+PRO_DIR="${REPO_ROOT}/release/Android/androidPro"
 HEADERS_DIR="${REPO_ROOT}/src/include"
 TOOLCHAIN="${CORE_DIR}/cmake/toolchains/android.toolchain.cmake"
 JOBS="$(sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
@@ -26,7 +26,7 @@ if [[ ! -f "${TOOLCHAIN}" ]]; then
   exit 1
 fi
 
-echo "==> [1/4] Build core.a → out/Android/a/${ABI}"
+echo "==> [1/4] Build core.a → release/Android/a/${ABI}"
 CMAKE_DIR="${A_OUT}/.cmake/${ABI}"
 SLICE_DIR="${A_OUT}/${ABI}"
 mkdir -p "${SLICE_DIR}" "${CMAKE_DIR}"
@@ -38,6 +38,7 @@ cmake -S "${CORE_DIR}" -B "${CMAKE_DIR}" \
   -DANDROID_PLATFORM="android-${API}" \
   -DANDROID_STL=c++_static \
   -DCMAKE_BUILD_TYPE=Release \
+  -DCORE_ENABLE_GL=ON \
   -DCORE_BUILD_EXAMPLES=OFF \
   -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY="${SLICE_DIR}"
 
@@ -77,7 +78,7 @@ else
   "${RUN_SCRIPT}"
 fi
 
-echo "✅ Android pipeline done."
+echo "***** 🍺🍺🍺 BUILD SUCCEEDED 🍺🍺🍺 *****"
 echo "    a:   ${A_OUT}/${ABI}/core.a"
 echo "    aar: ${SDK_OUT}/core.aar"
 echo "    pro: ${PRO_DIR}"

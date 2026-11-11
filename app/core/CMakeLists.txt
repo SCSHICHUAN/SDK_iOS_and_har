@@ -8,7 +8,7 @@ project(core
 # Repo layout:
 #   src/                 sources + public headers + host example
 #   app/core/            this CMake project
-#   out/core/<platform>/ build products
+#   release/core/<platform>/ build products
 get_filename_component(SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
 set(SDK_SRC_ROOT "${SDK_ROOT}/src")
 
@@ -37,6 +37,46 @@ target_include_directories(core
     $<BUILD_INTERFACE:${SDK_SRC_ROOT}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# OpenGL ES (layout mirrors GL-ARKit/ARKit/GL: camera/shader/mesh/model + C viewer API).
+# Consumer app links system GLES + libassimp (+ zlib on iOS).
+# GLSL lives in src/gl/shaders/; embedded into core.a at configure time.
+option(CORE_ENABLE_GL "Build GLES model viewer into core.a" OFF)
+if(CORE_ENABLE_GL)
+  set(CORE_GL_SHADERS_DIR "${SDK_SRC_ROOT}/gl/shaders")
+  set(CORE_GL_EMBEDDED_SHADERS_H "${CMAKE_CURRENT_BINARY_DIR}/generated/embedded_shaders.h")
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
+  add_custom_command(
+    OUTPUT "${CORE_GL_EMBEDDED_SHADERS_H}"
+    COMMAND "${CMAKE_COMMAND}"
+      -DCORE_GL_SHADERS_DIR=${CORE_GL_SHADERS_DIR}
+      -DCORE_GL_EMBEDDED_SHADERS_H=${CORE_GL_EMBEDDED_SHADERS_H}
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_gl_shaders.cmake"
+    DEPENDS
+      "${CORE_GL_SHADERS_DIR}/lighting-vs.vs"
+      "${CORE_GL_SHADERS_DIR}/lighting-fs.fs"
+      "${CORE_GL_SHADERS_DIR}/lamp-vs.vs"
+      "${CORE_GL_SHADERS_DIR}/lamp-fs.fs"
+      "${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_gl_shaders.cmake"
+    COMMENT "Embed GL shaders into embedded_shaders.h"
+    VERBATIM
+  )
+
+  target_sources(core PRIVATE
+    "${SDK_SRC_ROOT}/gl/gl_viewer.cpp"
+    "${SDK_SRC_ROOT}/gl/renderer_data.cpp"
+    "${SDK_SRC_ROOT}/gl/model.cpp"
+    "${CORE_GL_EMBEDDED_SHADERS_H}"
+  )
+  target_include_directories(core
+    PRIVATE
+      "${SDK_SRC_ROOT}/gl"
+      "${CMAKE_CURRENT_BINARY_DIR}/generated"
+      "${SDK_SRC_ROOT}/libs"
+      "${SDK_SRC_ROOT}/libs/assimp/include"
+  )
+  target_compile_definitions(core PRIVATE CORE_ENABLE_GL=1)
+endif()
 
 # Optional demos / host smoke test (not required for the .a itself).
 option(CORE_BUILD_EXAMPLES "Build host example that links core.a" ON)

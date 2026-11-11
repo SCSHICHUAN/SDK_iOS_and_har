@@ -5,8 +5,8 @@
 ## 内容
 
 - `project/core/`：Android Library（JNI + Kotlin API）
-- `scripts/package_aar.sh`：`core.a` → `out/Android/AndroidSDK/core.aar`
-- `scripts/run_androidpro.sh`：编译并启动 `out/Android/androidPro`
+- `scripts/package_aar.sh`：`core.a` → `release/Android/AndroidSDK/core.aar`
+- `scripts/run_androidpro.sh`：编译并启动 `release/Android/androidPro`
 
 ## 一键入口
 
@@ -16,7 +16,7 @@
 
 流程：
 
-1. NDK 编 `core.a` → `out/Android/a/<abi>/`
-2. 打 AAR → `out/Android/AndroidSDK/core.aar`
+1. NDK 编 `core.a` → `release/Android/a/<abi>/`
+2. 打 AAR → `release/Android/AndroidSDK/core.aar`
 3. 安装到 → `androidPro`（`implementation(files(.../core.aar))`）
 4. Gradle 编 APK 并启动模拟器

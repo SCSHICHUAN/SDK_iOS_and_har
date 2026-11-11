@@ -4,11 +4,11 @@ set -euo pipefail
 
 CORE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_ROOT="$(cd "${CORE_DIR}/../.." && pwd)"
-IOS_OUT="${REPO_ROOT}/out/iOS"
+IOS_OUT="${REPO_ROOT}/release/iOS"
 FW_CREATE="${REPO_ROOT}/app/iOS/FrameworkCreate"
 PRO_DIR="${IOS_OUT}/iOSpro"
 
-echo "==> Clean out/iOS/a (core.a + cmake + stage)"
+echo "==> Clean release/iOS/a (core.a + cmake + stage)"
 rm -rf "${IOS_OUT}/a"
 
 echo "==> Clean iOSSDK XCFramework"
