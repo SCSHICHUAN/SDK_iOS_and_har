@@ -59,6 +59,14 @@ Java_com_example_coresdk_CoreNative_glViewerOrbitEnd(JNIEnv* /*env*/, jclass /*c
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_example_coresdk_CoreNative_glViewerSetOrbitFeel(JNIEnv* /*env*/, jclass /*clazz*/,
+                                                         jlong handle, jfloat sensitivity,
+                                                         jfloat dampingFactor) {
+  core_gl_viewer_set_orbit_feel(reinterpret_cast<CoreGlViewer*>(handle), sensitivity,
+                                dampingFactor);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_example_coresdk_CoreNative_glViewerZoom(JNIEnv* /*env*/, jclass /*clazz*/, jlong handle,
                                                  jfloat scale) {
   core_gl_viewer_zoom(reinterpret_cast<CoreGlViewer*>(handle), scale);

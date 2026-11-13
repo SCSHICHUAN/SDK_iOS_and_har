@@ -75,6 +75,12 @@ export function glViewerOrbitEnd(handle: bigint): void {
   coreNapi.glViewerOrbitEnd(handle);
 }
 
+/** Defaults: sensitivity=15, dampingFactor=0.04 (↓ damping = heavier). */
+export function glViewerSetOrbitFeel(handle: bigint, sensitivity: number,
+                                     dampingFactor: number): void {
+  coreNapi.glViewerSetOrbitFeel(handle, sensitivity, dampingFactor);
+}
+
 export function glViewerZoom(handle: bigint, scale: number): void {
   coreNapi.glViewerZoom(handle, scale);
 }

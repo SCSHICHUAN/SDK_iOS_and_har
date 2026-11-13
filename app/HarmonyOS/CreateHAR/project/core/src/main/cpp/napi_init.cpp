@@ -123,6 +123,25 @@ napi_value GlViewerOrbitEnd(napi_env env, napi_callback_info info) {
   return nullptr;
 }
 
+napi_value GlViewerSetOrbitFeel(napi_env env, napi_callback_info info) {
+  size_t argc = 3;
+  napi_value args[3];
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  uint64_t handle = 0;
+  bool lossless = false;
+  double sensitivity = 15.0;
+  double dampingFactor = 0.04;
+  if (argc >= 1) napi_get_value_bigint_uint64(env, args[0], &handle, &lossless);
+  if (argc >= 2) napi_get_value_double(env, args[1], &sensitivity);
+  if (argc >= 3) napi_get_value_double(env, args[2], &dampingFactor);
+  if (handle) {
+    core_gl_viewer_set_orbit_feel(reinterpret_cast<CoreGlViewer*>(handle),
+                                  static_cast<float>(sensitivity),
+                                  static_cast<float>(dampingFactor));
+  }
+  return nullptr;
+}
+
 napi_value GlViewerZoom(napi_env env, napi_callback_info info) {
   size_t argc = 2;
   napi_value args[2];
@@ -247,6 +266,8 @@ static napi_value Init(napi_env env, napi_value exports) {
       {"glViewerOrbit", nullptr, GlViewerOrbit, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glViewerOrbitEnd", nullptr, GlViewerOrbitEnd, nullptr, nullptr, nullptr, napi_default,
        nullptr},
+      {"glViewerSetOrbitFeel", nullptr, GlViewerSetOrbitFeel, nullptr, nullptr, nullptr,
+       napi_default, nullptr},
       {"glViewerZoom", nullptr, GlViewerZoom, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glViewerDolly", nullptr, GlViewerDolly, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glViewerLightMoveX", nullptr, GlViewerLightMoveX, nullptr, nullptr, nullptr, napi_default,

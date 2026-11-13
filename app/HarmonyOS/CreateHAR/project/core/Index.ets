@@ -16,6 +16,7 @@ export {
   glViewerRender,
   glViewerOrbit,
   glViewerOrbitEnd,
+  glViewerSetOrbitFeel,
   glViewerZoom,
   glViewerDolly,
   glViewerLightMoveX,

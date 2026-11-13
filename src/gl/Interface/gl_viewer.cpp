@@ -67,6 +67,12 @@ extern "C" void core_gl_viewer_orbit_end(CoreGlViewer* viewer) {
   viewer->data.onOrbitEnd();
 }
 
+extern "C" void core_gl_viewer_set_orbit_feel(CoreGlViewer* viewer, float sensitivity,
+                                              float dampingFactor) {
+  if (!viewer) return;
+  viewer->data.setOrbitFeel(sensitivity, dampingFactor);
+}
+
 extern "C" void core_gl_viewer_zoom(CoreGlViewer* viewer, float scale) {
   if (!viewer) return;
   viewer->data.onPinch(scale);

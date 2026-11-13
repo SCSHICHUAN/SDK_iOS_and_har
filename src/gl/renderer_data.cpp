@@ -22,8 +22,15 @@ bool RendererData::init() {
   if (!lampShader_.ID) return false;
   initLightCube();
   glEnable(GL_DEPTH_TEST);
+  // 转轴不变：局部 Y + 相机 OX。手感默认：齿轮 15 + 阻尼 0.04（可 setOrbitFeel 改）。
+  setOrbitFeel(/*sensitivity*/ 15.0f, /*dampingFactor*/ 0.04f);
   ready_ = true;
   return true;
+}
+
+void RendererData::setOrbitFeel(float sensitivity, float dampingFactor) {
+  if (sensitivity > 1e-3f) arcball_.setSensitivity(sensitivity);
+  if (dampingFactor > 0.0f && dampingFactor < 1.0f) inertia_.setDamping(dampingFactor);
 }
 
 void RendererData::destroy() {
@@ -38,6 +45,7 @@ bool RendererData::loadModel(const std::string& path) {
   if (!model_.loadModel(path)) return false;
   distance_ = std::max(model_.radius() * 5.5f, 2.0f);
   arcball_.reset();
+  inertia_.reset();
   return true;
 }
 
@@ -45,6 +53,7 @@ bool RendererData::loadModelFromMemory(const void* data, size_t size, const char
   if (!model_.loadModelFromMemory(data, size, hint)) return false;
   distance_ = std::max(model_.radius() * 5.5f, 2.0f);
   arcball_.reset();
+  inertia_.reset();
   return true;
 }
 
@@ -56,14 +65,12 @@ void RendererData::resize(int width, int height) {
 }
 
 void RendererData::onOrbit(float dx, float dy) {
-  // Keep camera axes current so mobile tumble uses camera OX / OY.
-  const glm::vec3 center = model_.loaded() ? model_.center() : glm::vec3(0.0f);
-  camera_.SetOrbit(center, distance_, camYaw_, camPitch_);
-  // θ from Arcball; horizontal // model local Y; vertical // camera.Right (OX).
-  arcball_.drag(dx, dy, camera_.Right, camera_.Up);
+  // 只累残差；真正转模型在 render()→tick（拖着也阻尼，对标 su7）
+  inertia_.move(dx, dy);
 }
 
 void RendererData::onOrbitEnd() {
+  inertia_.end();  // 残差继续泄，无需另估速
   arcball_.endDrag();
 }
 
@@ -206,6 +213,12 @@ void RendererData::render() {
   const glm::vec3 center = model_.center();
   // Fixed camera; touch tumble spins the model about its AABB center.
   camera_.SetOrbit(center, distance_, camYaw_, camPitch_);
+
+  // 残差阻尼（按住追上 / 松手滑行）→ 同一套 ArcballMobile 转轴
+  float idx = 0.0f, idy = 0.0f;
+  if (inertia_.tick(idx, idy)) {
+    arcball_.drag(idx, idy, camera_.Right, camera_.Up);
+  }
 
   glm::mat4 model(1.0f);
   model = glm::translate(model, center);

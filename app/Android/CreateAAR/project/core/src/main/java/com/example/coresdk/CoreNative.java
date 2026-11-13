@@ -35,6 +35,13 @@ public final class CoreNative {
   /** Finger up — reseeds Arcball for the next drag. */
   public static native void glViewerOrbitEnd(long handle);
 
+  /**
+   * Orbit feel: gear ratio + residual damping.
+   * Defaults: sensitivity=15, dampingFactor=0.04 (lower damping = heavier).
+   */
+  public static native void glViewerSetOrbitFeel(long handle, float sensitivity,
+                                                float dampingFactor);
+
   /** Pinch: scale &gt; 1 zooms in. */
   public static native void glViewerZoom(long handle, float scale);
 

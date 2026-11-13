@@ -35,6 +35,12 @@ void core_gl_viewer_render(CoreGlViewer* viewer);
 void core_gl_viewer_orbit(CoreGlViewer* viewer, float dx, float dy);
 /** Finger / pointer up — reseeds Arcball OA on the next drag. */
 void core_gl_viewer_orbit_end(CoreGlViewer* viewer);
+/**
+ * 浏览手感（齿轮比 + 残差阻尼）。默认：sensitivity=15，dampingFactor=0.04。
+ * dampingFactor ↓ 更沉 / 滑更久；sensitivity ↑ 同样拖动转得更多。
+ */
+void core_gl_viewer_set_orbit_feel(CoreGlViewer* viewer, float sensitivity,
+                                   float dampingFactor);
 /** Pinch zoom: scale > 1 zooms in. */
 void core_gl_viewer_zoom(CoreGlViewer* viewer, float scale);
 /** Dolly: amount > 0 moves camera forward (closer to model). */
