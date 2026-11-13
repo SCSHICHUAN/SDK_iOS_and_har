@@ -240,11 +240,13 @@ void DispatchTouchEvent(OH_NativeXComponent* component, void* window) {
     st->lastX = x;
     st->lastY = y;
   } else if (event.type == OH_NATIVEXCOMPONENT_MOVE && st->hasTouch) {
-    core_gl_viewer_orbit(st->viewer, x - st->lastX, -(y - st->lastY));
+    // Pass raw screen deltas; Arcball flips Y internally (same as ArkTS/Android/iOS).
+    core_gl_viewer_orbit(st->viewer, x - st->lastX, y - st->lastY);
     st->lastX = x;
     st->lastY = y;
   } else if (event.type == OH_NATIVEXCOMPONENT_UP || event.type == OH_NATIVEXCOMPONENT_CANCEL) {
     st->hasTouch = false;
+    core_gl_viewer_orbit_end(st->viewer);
   }
 }
 
@@ -304,6 +306,16 @@ extern "C" napi_value GlOrbitAll(napi_env env, napi_callback_info info) {
     SurfaceState& st = kv.second;
     if (!st.viewer) continue;
     core_gl_viewer_orbit(st.viewer, static_cast<float>(dx), static_cast<float>(dy));
+  }
+  return nullptr;
+}
+
+extern "C" napi_value GlOrbitEndAll(napi_env /*env*/, napi_callback_info /*info*/) {
+  std::lock_guard<std::mutex> lock(g_mu);
+  for (auto& kv : g_surfaces) {
+    SurfaceState& st = kv.second;
+    if (!st.viewer) continue;
+    core_gl_viewer_orbit_end(st.viewer);
   }
   return nullptr;
 }

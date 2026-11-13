@@ -69,6 +69,11 @@ class ModelGLSurfaceView @JvmOverloads constructor(
                     queueEvent { renderer.orbit(dx, dy) }
                 }
             }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (!dragControlsLight) {
+                    queueEvent { renderer.orbitEnd() }
+                }
+            }
         }
         return true
     }
@@ -87,6 +92,10 @@ class ModelGLSurfaceView @JvmOverloads constructor(
 
         fun orbit(dx: Float, dy: Float) {
             if (handle != 0L) CoreNative.glViewerOrbit(handle, dx, dy)
+        }
+
+        fun orbitEnd() {
+            if (handle != 0L) CoreNative.glViewerOrbitEnd(handle)
         }
 
         fun lightDrag(dx: Float, dy: Float) {

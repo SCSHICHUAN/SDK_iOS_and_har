@@ -1,4 +1,4 @@
-import { glSetModelPath, glPresentAll, glOrbitAll, glDollyAll, glLightDragAll } from '@sdk/core';
+import { glSetModelPath, glPresentAll, glOrbitAll, glOrbitEndAll, glDollyAll, glLightDragAll } from '@sdk/core';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 import { fileIo as fs } from '@kit.CoreFileKit';
@@ -125,6 +125,12 @@ export struct ModelGLPage {
       }
     } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
       this.dragging = false;
+      if (!this.dragControlsLight) {
+        try {
+          glOrbitEndAll();
+        } catch (_) {
+        }
+      }
     }
   }
 

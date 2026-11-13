@@ -53,6 +53,12 @@ Java_com_example_coresdk_CoreNative_glViewerOrbit(JNIEnv* /*env*/, jclass /*claz
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_example_coresdk_CoreNative_glViewerOrbitEnd(JNIEnv* /*env*/, jclass /*clazz*/,
+                                                     jlong handle) {
+  core_gl_viewer_orbit_end(reinterpret_cast<CoreGlViewer*>(handle));
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_example_coresdk_CoreNative_glViewerZoom(JNIEnv* /*env*/, jclass /*clazz*/, jlong handle,
                                                  jfloat scale) {
   core_gl_viewer_zoom(reinterpret_cast<CoreGlViewer*>(handle), scale);

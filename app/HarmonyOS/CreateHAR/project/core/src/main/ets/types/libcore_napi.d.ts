@@ -6,6 +6,7 @@ declare module 'libcore_napi.so' {
     glSetModelData(data: ArrayBuffer | Uint8Array): void;
     glPresentAll(): void;
     glOrbitAll(dx: number, dy: number): void;
+    glOrbitEndAll(): void;
     glDollyAll(amount: number): void;
     glLightMoveXAll(amount: number): void;
     glLightDragAll(dx: number, dy: number): void;
@@ -15,6 +16,7 @@ declare module 'libcore_napi.so' {
     glViewerResize(handle: bigint, width: number, height: number): void;
     glViewerRender(handle: bigint): void;
     glViewerOrbit(handle: bigint, dx: number, dy: number): void;
+    glViewerOrbitEnd(handle: bigint): void;
     glViewerZoom(handle: bigint, scale: number): void;
     glViewerDolly(handle: bigint, amount: number): void;
     glViewerLightMoveX(handle: bigint, amount: number): void;

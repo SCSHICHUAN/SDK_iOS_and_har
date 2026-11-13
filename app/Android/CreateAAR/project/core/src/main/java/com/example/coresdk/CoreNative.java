@@ -32,6 +32,9 @@ public final class CoreNative {
 
   public static native void glViewerOrbit(long handle, float dx, float dy);
 
+  /** Finger up — reseeds Arcball for the next drag. */
+  public static native void glViewerOrbitEnd(long handle);
+
   /** Pinch: scale &gt; 1 zooms in. */
   public static native void glViewerZoom(long handle, float scale);
 

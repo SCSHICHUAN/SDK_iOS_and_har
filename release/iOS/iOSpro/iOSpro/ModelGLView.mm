@@ -109,9 +109,14 @@
 }
 
 - (void)onPan:(UIPanGestureRecognizer *)gr {
+  if (!_viewer) return;
+  if (gr.state == UIGestureRecognizerStateEnded ||
+      gr.state == UIGestureRecognizerStateCancelled) {
+    if (!_dragControlsLight) core_gl_viewer_orbit_end(_viewer);
+    return;
+  }
   CGPoint d = [gr translationInView:self];
   [gr setTranslation:CGPointZero inView:self];
-  if (!_viewer) return;
   // Object: (dx, dy). Light: flip Y only → (dx, -dy).
   const float dx = (float)d.x;
   const float dy = (float)d.y;

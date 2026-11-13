@@ -37,27 +37,34 @@ void RendererData::destroy() {
 bool RendererData::loadModel(const std::string& path) {
   if (!model_.loadModel(path)) return false;
   distance_ = std::max(model_.radius() * 5.5f, 2.0f);
+  arcball_.reset();
   return true;
 }
 
 bool RendererData::loadModelFromMemory(const void* data, size_t size, const char* hint) {
   if (!model_.loadModelFromMemory(data, size, hint)) return false;
   distance_ = std::max(model_.radius() * 5.5f, 2.0f);
+  arcball_.reset();
   return true;
 }
 
 void RendererData::resize(int width, int height) {
   width_ = std::max(width, 1);
   height_ = std::max(height, 1);
+  arcball_.setViewport(width_, height_);
   glViewport(0, 0, width_, height_);
 }
 
 void RendererData::onOrbit(float dx, float dy) {
-  // Rotate the box only — camera and lamp stay fixed in world/screen.
-  modelYaw_ += dx * 0.3f;
-  modelPitch_ += dy * 0.3f;
-  if (modelPitch_ > 89.0f) modelPitch_ = 89.0f;
-  if (modelPitch_ < -89.0f) modelPitch_ = -89.0f;
+  // Keep camera axes current so mobile tumble uses camera OX / OY.
+  const glm::vec3 center = model_.loaded() ? model_.center() : glm::vec3(0.0f);
+  camera_.SetOrbit(center, distance_, camYaw_, camPitch_);
+  // θ from Arcball; horizontal // model local Y; vertical // camera.Right (OX).
+  arcball_.drag(dx, dy, camera_.Right, camera_.Up);
+}
+
+void RendererData::onOrbitEnd() {
+  arcball_.endDrag();
 }
 
 void RendererData::onPinch(float scale) {
@@ -197,13 +204,12 @@ void RendererData::render() {
 
   elapsed_ += 1.0f / 60.0f;
   const glm::vec3 center = model_.center();
-  // Fixed camera; touch only spins the box.
+  // Fixed camera; touch tumble spins the model about its AABB center.
   camera_.SetOrbit(center, distance_, camYaw_, camPitch_);
 
   glm::mat4 model(1.0f);
   model = glm::translate(model, center);
-  model = glm::rotate(model, glm::radians(modelYaw_), glm::vec3(0.0f, 1.0f, 0.0f));
-  model = glm::rotate(model, glm::radians(modelPitch_), glm::vec3(1.0f, 0.0f, 0.0f));
+  model = model * arcball_.rotationMatrix();
   model = glm::translate(model, -center);
 
   glm::mat4 view = camera_.GetViewMatrix();

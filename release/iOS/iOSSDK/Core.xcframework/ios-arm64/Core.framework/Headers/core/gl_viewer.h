@@ -31,8 +31,10 @@ int core_gl_viewer_load_memory(CoreGlViewer* viewer, const void* data, int size,
 void core_gl_viewer_resize(CoreGlViewer* viewer, int width, int height);
 void core_gl_viewer_render(CoreGlViewer* viewer);
 
-/** Orbit from touch drag. */
+/** Orbit from touch drag (Arcball → rotation vector θ on the model). */
 void core_gl_viewer_orbit(CoreGlViewer* viewer, float dx, float dy);
+/** Finger / pointer up — reseeds Arcball OA on the next drag. */
+void core_gl_viewer_orbit_end(CoreGlViewer* viewer);
 /** Pinch zoom: scale > 1 zooms in. */
 void core_gl_viewer_zoom(CoreGlViewer* viewer, float scale);
 /** Dolly: amount > 0 moves camera forward (closer to model). */

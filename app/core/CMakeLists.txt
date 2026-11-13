@@ -41,6 +41,10 @@ target_include_directories(core
 # OpenGL ES (layout mirrors GL-ARKit/ARKit/GL: camera/shader/mesh/model + C viewer API).
 # Consumer app links system GLES + libassimp (+ zlib on iOS).
 # GLSL lives in src/gl/shaders/; embedded into core.a at configure time.
+# Layout:
+#   gl/Interface/           gl_viewer.cpp, gl_platform.h
+#   gl/viewport_controls/   camera.h, arcball.h
+#   gl/                     mesh/model/shader/renderer_data, shaders/, models/
 option(CORE_ENABLE_GL "Build GLES model viewer into core.a" OFF)
 if(CORE_ENABLE_GL)
   set(CORE_GL_SHADERS_DIR "${SDK_SRC_ROOT}/gl/shaders")
@@ -63,7 +67,7 @@ if(CORE_ENABLE_GL)
   )
 
   target_sources(core PRIVATE
-    "${SDK_SRC_ROOT}/gl/gl_viewer.cpp"
+    "${SDK_SRC_ROOT}/gl/Interface/gl_viewer.cpp"
     "${SDK_SRC_ROOT}/gl/renderer_data.cpp"
     "${SDK_SRC_ROOT}/gl/model.cpp"
     "${CORE_GL_EMBEDDED_SHADERS_H}"
@@ -71,6 +75,8 @@ if(CORE_ENABLE_GL)
   target_include_directories(core
     PRIVATE
       "${SDK_SRC_ROOT}/gl"
+      "${SDK_SRC_ROOT}/gl/Interface"
+      "${SDK_SRC_ROOT}/gl/viewport_controls"
       "${CMAKE_CURRENT_BINARY_DIR}/generated"
       "${SDK_SRC_ROOT}/libs"
       "${SDK_SRC_ROOT}/libs/assimp/include"

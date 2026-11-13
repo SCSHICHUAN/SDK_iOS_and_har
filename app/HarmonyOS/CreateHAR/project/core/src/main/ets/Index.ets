@@ -23,9 +23,13 @@ export function glPresentAll(): void {
   coreNapi.glPresentAll();
 }
 
-/** Orbit all GL surfaces (ArkTS onTouch → native camera). */
+/** Orbit all GL surfaces (ArkTS onTouch → Arcball). */
 export function glOrbitAll(dx: number, dy: number): void {
   coreNapi.glOrbitAll(dx, dy);
+}
+
+export function glOrbitEndAll(): void {
+  coreNapi.glOrbitEndAll();
 }
 
 /** Dolly all GL surfaces: amount > 0 moves camera forward. */
@@ -65,6 +69,10 @@ export function glViewerRender(handle: bigint): void {
 
 export function glViewerOrbit(handle: bigint, dx: number, dy: number): void {
   coreNapi.glViewerOrbit(handle, dx, dy);
+}
+
+export function glViewerOrbitEnd(handle: bigint): void {
+  coreNapi.glViewerOrbitEnd(handle);
 }
 
 export function glViewerZoom(handle: bigint, scale: number): void {

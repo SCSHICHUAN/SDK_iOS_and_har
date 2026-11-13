@@ -12,6 +12,7 @@ static std::vector<uint8_t> g_modelBytes;
 extern "C" void core_gl_reload_model_on_surfaces();
 extern "C" napi_value GlPresentAll(napi_env env, napi_callback_info info);
 extern "C" napi_value GlOrbitAll(napi_env env, napi_callback_info info);
+extern "C" napi_value GlOrbitEndAll(napi_env env, napi_callback_info info);
 extern "C" napi_value GlDollyAll(napi_env env, napi_callback_info info);
 extern "C" napi_value GlLightMoveXAll(napi_env env, napi_callback_info info);
 extern "C" napi_value GlLightDragAll(napi_env env, napi_callback_info info);
@@ -108,6 +109,17 @@ napi_value GlViewerOrbit(napi_env env, napi_callback_info info) {
   if (argc >= 3) napi_get_value_double(env, args[2], &dy);
   if (handle) core_gl_viewer_orbit(reinterpret_cast<CoreGlViewer*>(handle),
                                    static_cast<float>(dx), static_cast<float>(dy));
+  return nullptr;
+}
+
+napi_value GlViewerOrbitEnd(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value args[1];
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  uint64_t handle = 0;
+  bool lossless = false;
+  if (argc >= 1) napi_get_value_bigint_uint64(env, args[0], &handle, &lossless);
+  if (handle) core_gl_viewer_orbit_end(reinterpret_cast<CoreGlViewer*>(handle));
   return nullptr;
 }
 
@@ -233,6 +245,8 @@ static napi_value Init(napi_env env, napi_value exports) {
       {"glViewerResize", nullptr, GlViewerResize, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glViewerRender", nullptr, GlViewerRender, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glViewerOrbit", nullptr, GlViewerOrbit, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"glViewerOrbitEnd", nullptr, GlViewerOrbitEnd, nullptr, nullptr, nullptr, napi_default,
+       nullptr},
       {"glViewerZoom", nullptr, GlViewerZoom, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glViewerDolly", nullptr, GlViewerDolly, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glViewerLightMoveX", nullptr, GlViewerLightMoveX, nullptr, nullptr, nullptr, napi_default,
@@ -243,6 +257,7 @@ static napi_value Init(napi_env env, napi_value exports) {
       // before XComponent attaches, and that binding is what glPresentAll() uses.
       {"glPresentAll", nullptr, GlPresentAll, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glOrbitAll", nullptr, GlOrbitAll, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"glOrbitEndAll", nullptr, GlOrbitEndAll, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glDollyAll", nullptr, GlDollyAll, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glLightMoveXAll", nullptr, GlLightMoveXAll, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glLightDragAll", nullptr, GlLightDragAll, nullptr, nullptr, nullptr, napi_default, nullptr},

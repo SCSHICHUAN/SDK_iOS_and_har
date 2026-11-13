@@ -12,6 +12,7 @@
 #ifndef CORE_GL_RENDERER_DATA_H_
 #define CORE_GL_RENDERER_DATA_H_
 
+#include "arcball_mobile.h"
 #include "camera.h"
 #include "model.h"
 #include "shader.h"
@@ -35,8 +36,10 @@ class RendererData {
   bool hasModel() const { return model_.loaded(); }
 
   void resize(int width, int height);
-  /** Touch-drag rotates the box only (camera + lamp stay put). */
+  /** Touch-drag: mobile tumble rotates the model (camera + lamp stay put). */
   void onOrbit(float dx, float dy);
+  /** Finger up — next orbit re-seeds OA on the virtual sphere. */
+  void onOrbitEnd();
   /** Pinch: scale > 1 zooms in. */
   void onPinch(float scale);
   /** Dolly along view: amount > 0 moves camera forward (closer). */
@@ -59,6 +62,8 @@ class RendererData {
   Shader shader_;
   Shader lampShader_;
   Camera camera_;
+  /** Trial: ArcballMobile (Arcball + axis.z=0). Swap to Arcball to compare. */
+  ArcballMobile arcball_;
   unsigned int lightCubeVAO_ = 0;
   unsigned int lightCubeVBO_ = 0;
   int width_ = 1;
@@ -66,9 +71,6 @@ class RendererData {
   /** Fixed camera orbit angles (not driven by touch). */
   float camYaw_ = 30.0f;
   float camPitch_ = 20.0f;
-  /** Touch rotates the box in world space. */
-  float modelYaw_ = 0.0f;
-  float modelPitch_ = 0.0f;
   float distance_ = 3.0f;
   float lightX_ = -0.4f;
   float lightY_ = 1.15f;

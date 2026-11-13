@@ -62,6 +62,11 @@ extern "C" void core_gl_viewer_orbit(CoreGlViewer* viewer, float dx, float dy) {
   viewer->data.onOrbit(dx, dy);
 }
 
+extern "C" void core_gl_viewer_orbit_end(CoreGlViewer* viewer) {
+  if (!viewer) return;
+  viewer->data.onOrbitEnd();
+}
+
 extern "C" void core_gl_viewer_zoom(CoreGlViewer* viewer, float scale) {
   if (!viewer) return;
   viewer->data.onPinch(scale);
