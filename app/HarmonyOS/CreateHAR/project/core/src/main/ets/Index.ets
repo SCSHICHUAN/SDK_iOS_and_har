@@ -75,10 +75,10 @@ export function glViewerOrbitEnd(handle: bigint): void {
   coreNapi.glViewerOrbitEnd(handle);
 }
 
-/** Defaults: sensitivity=15, dampingFactor=0.04 (↓ damping = heavier). */
+/** Defaults: sensitivity=1, brakeFactor=0.10 (↑ brake = stops faster; drag unaffected). */
 export function glViewerSetOrbitFeel(handle: bigint, sensitivity: number,
-                                     dampingFactor: number): void {
-  coreNapi.glViewerSetOrbitFeel(handle, sensitivity, dampingFactor);
+                                     brakeFactor: number): void {
+  coreNapi.glViewerSetOrbitFeel(handle, sensitivity, brakeFactor);
 }
 
 export function glViewerZoom(handle: bigint, scale: number): void {

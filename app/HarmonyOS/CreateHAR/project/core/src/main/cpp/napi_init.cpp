@@ -129,15 +129,15 @@ napi_value GlViewerSetOrbitFeel(napi_env env, napi_callback_info info) {
   napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
   uint64_t handle = 0;
   bool lossless = false;
-  double sensitivity = 15.0;
-  double dampingFactor = 0.04;
+  double sensitivity = 1.0;
+  double brakeFactor = 0.10;
   if (argc >= 1) napi_get_value_bigint_uint64(env, args[0], &handle, &lossless);
   if (argc >= 2) napi_get_value_double(env, args[1], &sensitivity);
-  if (argc >= 3) napi_get_value_double(env, args[2], &dampingFactor);
+  if (argc >= 3) napi_get_value_double(env, args[2], &brakeFactor);
   if (handle) {
     core_gl_viewer_set_orbit_feel(reinterpret_cast<CoreGlViewer*>(handle),
                                   static_cast<float>(sensitivity),
-                                  static_cast<float>(dampingFactor));
+                                  static_cast<float>(brakeFactor));
   }
   return nullptr;
 }

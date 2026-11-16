@@ -1,5 +1,6 @@
 //
 // camera.h — from GL-ARKit/ARKit/GL/Camera.h (normalized for core SDK)
+// 固定观察相机：键盘/鼠标改位姿；给 ArcballMobile 提供 Right / Up 选轴
 //
 
 #ifndef CORE_GL_CAMERA_H_
@@ -31,17 +32,19 @@ const float kCameraZoom = 45.0f;
 
 class Camera {
  public:
-  glm::vec3 Position;
-  glm::vec3 Front;
-  glm::vec3 Up;
-  glm::vec3 Right;
-  glm::vec3 WorldUp;
-  float Yaw;
-  float Pitch;
-  float MovementSpeed;
+  // —— members ——
+  glm::vec3 Position;   // 相机世界坐标
+  glm::vec3 Front;      // 朝前单位向量
+  glm::vec3 Up;         // 相机上方向（供 mobile 选轴）
+  glm::vec3 Right;      // 相机右方向 / OX（供 mobile 俯仰轴）
+  glm::vec3 WorldUp;    // 世界 up，用于重算 Right/Up
+  float Yaw;            // 偏航角（度）
+  float Pitch;          // 俯仰角（度）
+  float MovementSpeed;  // 前进/后退速度
   float MouseSensitivity;
-  float Zoom;
+  float Zoom;           // 透视 FOV 相关
 
+  // —— methods ——
   Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
          glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
          float yaw = kCameraYaw,
@@ -70,10 +73,12 @@ class Camera {
     updateCameraVectors();
   }
 
+  /** lookAt(Position, Position+Front, Up) */
   glm::mat4 GetViewMatrix() const {
     return glm::lookAt(Position, Position + Front, Up);
   }
 
+  /** 键盘平移；左右用压平后的 Front×WorldUp，避免飞天侧移 */
   void ProcessKeyboard(Camera_Movement direction, float deltaTime) {
     float fwdVel = MovementSpeed * deltaTime;
     float sideVel = kCameraStrafeSpeed * deltaTime;
@@ -93,6 +98,7 @@ class Camera {
     if (direction == DOWN) Position -= Up * sideVel;
   }
 
+  /** 朝向目标点，反推 Yaw/Pitch 并刷新轴 */
   void LookAtPoint(glm::vec3 target) {
     glm::vec3 dir = target - Position;
     float len = glm::length(dir);
@@ -106,6 +112,7 @@ class Camera {
     updateCameraVectors();
   }
 
+  /** 鼠标看向：乘 MouseSensitivity 后改 Yaw/Pitch */
   void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true) {
     xoffset *= MouseSensitivity;
     yoffset *= MouseSensitivity;
@@ -124,7 +131,7 @@ class Camera {
     if (Zoom > 45.0f) Zoom = 45.0f;
   }
 
-  /** Place camera on a sphere around `center` (model browse / orbit). */
+  /** 把相机放到绕 center 的球面上（模型浏览固定机位） */
   void SetOrbit(const glm::vec3& center, float distance, float yawDeg, float pitchDeg) {
     if (pitchDeg > 89.0f) pitchDeg = 89.0f;
     if (pitchDeg < -89.0f) pitchDeg = -89.0f;
@@ -138,6 +145,7 @@ class Camera {
   }
 
  private:
+  /** 由 Yaw/Pitch 重算 Front / Right / Up */
   void updateCameraVectors() {
     glm::vec3 front;
     front.y = sin(glm::radians(Pitch));

@@ -12,9 +12,9 @@
 #ifndef CORE_GL_RENDERER_DATA_H_
 #define CORE_GL_RENDERER_DATA_H_
 
-#include "Inertia.h"
 #include "arcball_mobile.h"
 #include "camera.h"
+#include "inertia.h"
 #include "model.h"
 #include "shader.h"
 
@@ -42,11 +42,11 @@ class RendererData {
   /** Finger up — next orbit re-seeds OA on the virtual sphere. */
   void onOrbitEnd();
   /**
-   * 浏览手感：齿轮比 + 残差阻尼。
-   * @param sensitivity   ArcballMobile 齿轮比（默认 15）
-   * @param dampingFactor 每帧消费残差比例（默认 0.04；↓更沉）
+   * 浏览手感（两参数互不依赖，对标 Sketchfab）：
+   * @param sensitivity  OrbitControls rotateSpeed（默认 1：一屏高≈一圈）
+   * @param brakeFactor  仅松手刹车（默认 0.10）：↑ 刹得越快，不影响拖动
    */
-  void setOrbitFeel(float sensitivity, float dampingFactor);
+  void setOrbitFeel(float sensitivity, float brakeFactor);
   /** Pinch: scale > 1 zooms in. */
   void onPinch(float scale);
   /** Dolly along view: amount > 0 moves camera forward (closer). */

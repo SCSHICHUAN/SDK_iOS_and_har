@@ -22,15 +22,16 @@ bool RendererData::init() {
   if (!lampShader_.ID) return false;
   initLightCube();
   glEnable(GL_DEPTH_TEST);
-  // 转轴不变：局部 Y + 相机 OX。手感默认：齿轮 15 + 阻尼 0.04（可 setOrbitFeel 改）。
-  setOrbitFeel(/*sensitivity*/ 15.0f, /*dampingFactor*/ 0.04f);
+  // Sensitivity uses ArcballMobile default (edit the header const); here only brake.
+  inertia_.setBrake(kInertiaBrakeFactor);
   ready_ = true;
   return true;
 }
 
-void RendererData::setOrbitFeel(float sensitivity, float dampingFactor) {
+void RendererData::setOrbitFeel(float sensitivity, float brakeFactor) {
   if (sensitivity > 1e-3f) arcball_.setSensitivity(sensitivity);
-  if (dampingFactor > 0.0f && dampingFactor < 1.0f) inertia_.setDamping(dampingFactor);
+  // 第二个参数只进刹车，不再当拖动残差阻尼
+  if (brakeFactor > 0.0f && brakeFactor < 1.0f) inertia_.setBrake(brakeFactor);
 }
 
 void RendererData::destroy() {
@@ -65,12 +66,12 @@ void RendererData::resize(int width, int height) {
 }
 
 void RendererData::onOrbit(float dx, float dy) {
-  // 只累残差；真正转模型在 render()→tick（拖着也阻尼，对标 su7）
+  // 拖动 100% 入队；比例只由 arcball sensitivity 决定
   inertia_.move(dx, dy);
 }
 
 void RendererData::onOrbitEnd() {
-  inertia_.end();  // 残差继续泄，无需另估速
+  inertia_.end();  // 独立估速 + 独立刹车
   arcball_.endDrag();
 }
 
@@ -214,7 +215,7 @@ void RendererData::render() {
   // Fixed camera; touch tumble spins the model about its AABB center.
   camera_.SetOrbit(center, distance_, camYaw_, camPitch_);
 
-  // 残差阻尼（按住追上 / 松手滑行）→ 同一套 ArcballMobile 转轴
+  // tick：拖动 pending 全量 +（若松手）独立刹车位移 → 同一套转轴
   float idx = 0.0f, idy = 0.0f;
   if (inertia_.tick(idx, idy)) {
     arcball_.drag(idx, idy, camera_.Right, camera_.Up);

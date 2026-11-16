@@ -36,11 +36,11 @@ public final class CoreNative {
   public static native void glViewerOrbitEnd(long handle);
 
   /**
-   * Orbit feel: gear ratio + residual damping.
-   * Defaults: sensitivity=15, dampingFactor=0.04 (lower damping = heavier).
+   * Orbit feel (independent): sensitivity = drag gear; brakeFactor = release brake only.
+   * Defaults: sensitivity=1, brakeFactor=0.10 (higher brake = stops faster).
    */
   public static native void glViewerSetOrbitFeel(long handle, float sensitivity,
-                                                float dampingFactor);
+                                                float brakeFactor);
 
   /** Pinch: scale &gt; 1 zooms in. */
   public static native void glViewerZoom(long handle, float scale);

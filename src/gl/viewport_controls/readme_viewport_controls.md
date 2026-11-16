@@ -1,12 +1,14 @@
 # Viewport Controls — 选型 / 选轴 / Arcball / 残差阻尼
 
-本文记录模型浏览手势的最终方案与取舍。实现见同目录：
+本文记录模型浏览手势的最终方案与取舍。实现见同目录。
+
+**头文件规范（对齐 [`camera.h`](camera.h)）**：类外 `kXxx` 默认常量 → `public` 里先 `// —— members ——`（PascalCase 公开字段）再 `// —— methods ——` → `private` 只放辅助。改手感优先改常量 / 公开成员，而不是翻方法实现。
 
 | 文件 | 角色 |
 |------|------|
 | [`arcball.h`](arcball.h) | 完整轨迹球（球面 OA/OB → 任意轴 θ，四元数累加） |
 | [`arcball_mobile.h`](arcball_mobile.h) | **当前 Pro 使用**：局部 Y + 相机 OX + 齿轮灵敏度 |
-| [`Inertia.h`](Inertia.h) | **残差阻尼**（拖/松同一条曲线，对标 Sketchfab / su7） |
+| [`inertia.h`](inertia.h) | 拖动跟手 + 独立松手刹车 |
 | [`camera.h`](camera.h) | 固定观察相机；提供 `Right` / `Up` 给 mobile 选轴 |
 | [`../renderer_data.cpp`](../renderer_data.cpp) | 接线：move→残差，tick→drag；枢轴过 AABB center |
 
@@ -27,7 +29,7 @@
 
 - 移动端看模型更常见「握住物体拧」：左右/上下分轴，少绕视线滚转。
 - 完整 Arcball 斜拖会走大圆弧并带 roll，浏览手感容易「飘」。
-- 幅度：`θ = (px / radius) * sensitivity`（齿轮比，可超过跟手）。
+- 幅度对齐 OrbitControls：`θ = 2π · (px / height) · sensitivity`（默认 1 ≈ 一屏高一圈）。
 
 ```text
 完整 Arcball:  拖拽 → OA/OB → n=OA×OB（任意方向）→ θ → 四元数
@@ -51,51 +53,45 @@ Touch **不锁轴**：`(dx,dy)` 可同时非零，一帧内分别施加。
 
 ---
 
-## 3. 残差阻尼 Inertia（现行手感核心）
+## 3. Inertia：拖动比例 ⊥ 松手刹车（必须解耦）
 
-对标 Sketchfab / `su7.mov`：**不是立刻消费输入，而是有消费速度。**
+旧残差阻尼把「拖着追残差」和「松手滑行」绑在同一个 `d` 上 → 一改刹车就影响拖动。现行拆开：
 
 ```text
-move：  residual += (dx, dy)          ← 只记账，不转模型
-每帧：  apply = residual × d
-        residual -= apply
-        arcball.drag(apply, …)       ← 真正转
-end：   残差继续泄                    ← 自然滑行（不必另估速）
+③ 拖动比例（sensitivity = OrbitControls rotateSpeed）
+   手指 dx → pending 100% → tick 全量吐出 → drag
+   θ = 2π · (px / height) · sensitivity；与刹车无关
+
+④ 松手刹车（brakeFactor）
+   end：近窗估速 → coast；tick：v·dt 后 v*=(1-brake)
+   与拖动比例无关
 ```
 
-`d = dampingFactor`（指数衰减）。拖着按住不动也会「追上」残差 → 沉；松手同一条曲线。
+| 参数 | 管什么 | 不管什么 |
+|------|--------|----------|
+| `sensitivity` | 拖多少 → 转多少 | 松手滑多久 |
+| `brakeFactor` | 松手刹多快 | 拖着转多少 |
 
-| 操作 | 观感 |
-|------|------|
-| 突然快划 | 残差堆高，多帧才追上 → 厚重 |
-| 匀速拖 | 稳态跟手，仍略滞后 |
-| 甩完松手 | 残差未清完 → 软滑行 |
-| 慢慢停再松 | 残差≈0 → 几乎不滑 |
-
-**旧方案**（已弃）：拖时立刻 `drag(dx)`，松手再 `v=Δs/Δt` coast —— 拖的时候没有惯性，对不上 su7。
+启动：`begin` 只打断 coast、清速度，不再另乘启动增益。
 
 ---
 
-## 4. 默认值与对外调参
+## 4. 默认值（对标 Sketchfab / su7）
 
 | 参数 | 默认 | 含义 |
 |------|------|------|
-| **sensitivity**（比例/齿轮比） | **15** | 同样像素转多少角；↑ 更灵敏 |
-| **dampingFactor**（惯性消费速度） | **0.04** | 每帧吃掉残差的比例；**↓ 更沉、滑更久**；↑ 更跟手 |
+| **sensitivity** | **1.0** | 一屏高 ≈ 转一圈 |
+| **brakeFactor** | **0.10** | 松手约 0.5s 软刹 |
 
 ```c
-// C / 各端统一入口
-core_gl_viewer_set_orbit_feel(viewer, /*sensitivity*/ 15.f, /*dampingFactor*/ 0.04f);
+core_gl_viewer_set_orbit_feel(viewer, /*sensitivity*/ 1.f, /*brakeFactor*/ 0.10f);
 
-// 更沉一点
-core_gl_viewer_set_orbit_feel(viewer, 15.f, 0.025f);
+// 拖得更猛，刹车不变
+core_gl_viewer_set_orbit_feel(viewer, 1.4f, 0.10f);
 
-// 转得更多 + 稍跟手
-core_gl_viewer_set_orbit_feel(viewer, 25.f, 0.06f);
+// 拖动不变，刹得更干脆
+core_gl_viewer_set_orbit_feel(viewer, 1.f, 0.16f);
 ```
-
-`RendererData::init()` 会设成上述默认；之后可随时 `set_orbit_feel` 覆盖。  
-**不要**用把 `sensitivity` 拉很大来冒充厚重——厚重只调 `dampingFactor`。
 
 ---
 
@@ -103,22 +99,21 @@ core_gl_viewer_set_orbit_feel(viewer, 25.f, 0.06f);
 
 ```text
 Pro 触摸
-  MOVE  → core_gl_viewer_orbit(dx,dy)
-            → inertia_.move          // 累残差
-  UP    → core_gl_viewer_orbit_end
-            → inertia_.end           // 残差继续泄
+  MOVE  → orbit(dx,dy) → inertia_.move   // pending += dx（100% 跟手）+ 采样速度
+  UP    → orbit_end    → inertia_.end    // 独立估速启动刹车
 
-render  → inertia_.tick → (applyDx, applyDy)
-            → ArcballMobile::drag(apply, cam.Right, cam.Up)
-            → model = T(c) * R * T(-c)
+render  → inertia_.tick
+            → 吐出 pending（拖动）
+            → 若 coast：叠加 v·dt 并 brake
+            → ArcballMobile::drag(...)
 ```
 
 ---
 
 ## 6. 文件与切换
 
-- **当前**：`RendererData` = `ArcballMobile` + `Inertia` 残差阻尼。
-- **对比完整轨迹球**：改回 `#include "arcball.h"` + `Arcball`（无相机轴参数）。
+- **当前**：`ArcballMobile`（比例）+ `Inertia`（仅松手刹车）。
+- **对比完整轨迹球**：改回 `#include "arcball.h"` + `Arcball`。
 
 三端 touch **无加速度**；不用系统加速度计。
 
@@ -126,5 +121,5 @@ render  → inertia_.tick → (applyDx, applyDy)
 
 ## 7. 一句话总结
 
-> **Mobile 浏览 = 局部 Y（倒置修正）+ 相机 OX + 齿轮 θ + 枢轴过中心 + 残差阻尼（输入不立即消费，按 dampingFactor 消费；拖/松同一条曲线）。**  
-> 对外：`core_gl_viewer_set_orbit_feel(sensitivity=15, dampingFactor=0.04)`。
+> **Mobile 浏览 = 局部 Y + 相机 OX + OrbitControls 幅度(sensitivity=1) + 枢轴过中心 + 松手独立刹车(brakeFactor=0.10)。**  
+> 对外：`core_gl_viewer_set_orbit_feel(1.0, 0.10)`。

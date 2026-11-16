@@ -1,14 +1,12 @@
 //
-// Inertia.h — OrbitControls / Sketchfab 残差阻尼（拖的时候就阻尼，不只是松手）
+// inertia.h — 拖动 100% 跟手；松手刹车与 Sensitivity 解耦
 //
-// su7.mov / Sketchfab 真正差在这：
-//   输入不立刻整段上模型，而是累进 residual
-//   每帧：apply = residual * dampingFactor
-//         residual *= (1 - dampingFactor)
-//   手指按住不动：模型继续「追上」残差 → 沉
-//   松手：同一套残差继续泄 → 自然滑行
+// 与旧「残差阻尼」的区别：
+//   旧：拖着 / 松手共用一个 damping → 改刹车就拖不动
+//   现：
+//     ③ 拖动：move 把 dx 全量进 Pending，tick 全量吐出 → 跟手由 Arcball Sensitivity 决定
+//     ④ 松手：end 近窗估速启动 Coast；tick 里 v*=(1-BrakeFactor) → 只管滑行长短
 //
-// 旧方案只在 end 估速再 coast：拖的时候仍是生硬 1:1，对不上 su7。
 // 转轴仍由 ArcballMobile 决定；这里只产出平滑后的 (dx,dy)。
 //
 
@@ -19,129 +17,272 @@
 #include <chrono>
 #include <cmath>
 
+/** 每「帧」(按 60fps 折合) 速度保留比例的补：v *= (1 - brake)^frames；越大刹越快 */
+const float kInertiaBrakeFactor = 0.10f;
+/** 松手瞬时速度低于此则不启动滑行（像素/秒量级） */
+const float kInertiaSpeedThreshold = 60.0f;
+/** 滑行中速度低于此则停 */
+const float kInertiaStopSpeed = 22.0f;
+
 class Inertia {
  public:
   using Clock = std::chrono::steady_clock;
 
+  static constexpr int kMaxSamples = 24;
+
+  /** 近窗估速用的瞬时速度样本 */
+  struct Sample {
+    float vx = 0.0f;
+    float vy = 0.0f;
+    Clock::time_point t{};
+  };
+
+  // —— members ——
+  bool Touching;   // 手指是否按下
+  bool Coasting;   // 是否在松手滑行
+  bool HasSample;  // 是否采过速度（用于 end 判 fling）
+
+  float PendingDx;  // 本帧尚未吐给 arcball 的拖动残差 X（拖动路径 100% 入队）
+  float PendingDy;
+  float BeginX;     // begin 时屏幕坐标（调试/对外查询）
+  float BeginY;
+  float LastX;      // 累计光标（相对 begin 的位移轨迹）
+  float LastY;
+
+  float Vx;  // EMA 拖动速度（像素/秒）
+  float Vy;
+  Clock::time_point LastSampleTime;
+  Sample Samples[kMaxSamples];
+  int SampleCount;
+  int SampleWrite;
+
+  float CoastVx;  // 松手后滑行速度
+  float CoastVy;
+  Clock::time_point LastTickTime;
+
+  float BrakeFactor;     // 仅松手刹车；与 Sensitivity 无关
+  float SpeedThreshold;  // 低于此不启动 coast
+  float StopSpeed;       // coast 停速
+
+  // —— methods ——
+  Inertia()
+      : Touching(false),
+        Coasting(false),
+        HasSample(false),
+        PendingDx(0.0f),
+        PendingDy(0.0f),
+        BeginX(0.0f),
+        BeginY(0.0f),
+        LastX(0.0f),
+        LastY(0.0f),
+        Vx(0.0f),
+        Vy(0.0f),
+        SampleCount(0),
+        SampleWrite(0),
+        CoastVx(0.0f),
+        CoastVy(0.0f),
+        BrakeFactor(kInertiaBrakeFactor),
+        SpeedThreshold(kInertiaSpeedThreshold),
+        StopSpeed(kInertiaStopSpeed) {
+    LastTickTime = Clock::now();
+  }
+
   /**
-   * @param dampingFactor  每帧吃掉残差的比例（现行默认 0.04；Sketchfab 常 0.05~0.08）
-   * @param stopEpsilon    |residual| 低于此且未触摸则停
-   * @param unused2/3/4    兼容旧 setParams 形参位置
+   * 兼容旧 setParams 形参位置；现行只用 brake / speedThreshold / stopSpeed。
+   * @param brakeFactor  松手每帧刹多少（0~1，默认 0.10）
    */
-  void setParams(float dampingFactor, float /*unused*/ = 0.0f,
-                 float /*unusedThr*/ = 0.0f, float /*unusedMass*/ = 1.0f,
-                 float /*unusedEma*/ = 0.0f, float stopEpsilon = 0.35f) {
-    if (dampingFactor > 0.0f && dampingFactor < 1.0f) dampingFactor_ = dampingFactor;
-    if (stopEpsilon > 0.0f) stopEpsilon_ = stopEpsilon;
+  void setParams(float brakeFactor, float /*unused*/ = 0.0f, float speedThreshold = 80.0f,
+                 float /*unusedMass*/ = 1.0f, float /*unusedEma*/ = 0.0f,
+                 float stopSpeed = 25.0f) {
+    setBrake(brakeFactor);
+    if (speedThreshold >= 0.0f) SpeedThreshold = speedThreshold;
+    if (stopSpeed > 0.0f) StopSpeed = stopSpeed;
   }
 
-  void setDamping(float dampingFactor) {
-    if (dampingFactor > 0.0f && dampingFactor < 1.0f) dampingFactor_ = dampingFactor;
+  /** 旧名兼容 → setBrake */
+  void setDamping(float brakeFactor) { setBrake(brakeFactor); }
+
+  /** 只改松手刹车，不影响拖动跟手 */
+  void setBrake(float brakeFactor) {
+    if (brakeFactor > 0.0f && brakeFactor < 1.0f) BrakeFactor = brakeFactor;
   }
 
+  float brakeFactor() const { return BrakeFactor; }
+
+  /** 清空拖动 / 滑行状态 */
   void reset() {
-    touching_ = false;
-    active_ = false;
-    resX_ = resY_ = 0.0f;
-    beginX_ = beginY_ = 0.0f;
-    lastX_ = lastY_ = 0.0f;
-    lastTickTime_ = Clock::now();
+    Touching = false;
+    Coasting = false;
+    PendingDx = PendingDy = 0.0f;
+    CoastVx = CoastVy = 0.0f;
+    Vx = Vy = 0.0f;
+    BeginX = BeginY = 0.0f;
+    LastX = LastY = 0.0f;
+    HasSample = false;
+    SampleCount = 0;
+    SampleWrite = 0;
+    LastTickTime = Clock::now();
   }
 
-  /** 按下：清残差，打断上一轮滑行 */
+  /** 按下：打断 coast，清 pending / 速度样本 */
   void begin(float x = 0.0f, float y = 0.0f) {
-    touching_ = true;
-    active_ = true;
-    resX_ = resY_ = 0.0f;
-    beginX_ = x;
-    beginY_ = y;
-    lastX_ = x;
-    lastY_ = y;
-    lastTickTime_ = Clock::now();
-  }
-
-  /** 拖动：只累加残差，不直接转模型 */
-  void move(float dx, float dy) {
-    if (!touching_) begin(0.0f, 0.0f);
-    resX_ += dx;
-    resY_ += dy;
-    lastX_ += dx;
-    lastY_ += dy;
-    active_ = true;
-  }
-
-  /** 抬手：残差继续由 tick 泄完（同一条阻尼曲线） */
-  void end() {
-    touching_ = false;
-    // 残差还在 → active_ 保持，由 tick 收尾
-    if (std::fabs(resX_) < stopEpsilon_ && std::fabs(resY_) < stopEpsilon_) {
-      resX_ = resY_ = 0.0f;
-      active_ = false;
-    }
+    Coasting = false;
+    CoastVx = CoastVy = 0.0f;
+    Touching = true;
+    PendingDx = PendingDy = 0.0f;
+    BeginX = x;
+    BeginY = y;
+    LastX = x;
+    LastY = y;
+    Vx = Vy = 0.0f;
+    HasSample = false;
+    SampleCount = 0;
+    SampleWrite = 0;
+    LastSampleTime = Clock::now();
+    LastTickTime = LastSampleTime;
   }
 
   /**
-   * 每帧取出本帧应施加的屏幕位移（已按 dt 折合到 60fps 阻尼强度）。
-   * 拖着 / 松手后都走这里 → arcball.drag(outDx, outDy, ...)。
+   * 拖动：dx/dy 100% 入 Pending（跟手）；同时采样速度供松手 fling。
+   * 不乘 Sensitivity——比例只在 ArcballMobile::drag 里算。
+   */
+  void move(float dx, float dy) {
+    if (!Touching) begin(0.0f, 0.0f);
+    Coasting = false;
+    CoastVx = CoastVy = 0.0f;
+
+    PendingDx += dx;
+    PendingDy += dy;
+    LastX += dx;
+    LastY += dy;
+
+    const Clock::time_point now = Clock::now();
+    float dt = HasSample ? secondsBetween(LastSampleTime, now) : (1.0f / 60.0f);
+    if (dt < 1e-4f) dt = 1e-4f;
+    if (dt > 0.1f) dt = 0.1f;
+    const float instVx = dx / dt;
+    const float instVy = dy / dt;
+    const float alpha = 0.45f;
+    if (HasSample) {
+      Vx = alpha * instVx + (1.0f - alpha) * Vx;
+      Vy = alpha * instVy + (1.0f - alpha) * Vy;
+    } else {
+      Vx = instVx;
+      Vy = instVy;
+    }
+    pushSample(instVx, instVy, now);
+    LastSampleTime = now;
+    HasSample = true;
+  }
+
+  /**
+   * 抬手：近窗加权估速；高于 SpeedThreshold 则启动 Coast。
+   * 低速直接停，避免轻点也滑。
+   */
+  void end() {
+    Touching = false;
+
+    float flingVx = Vx;
+    float flingVy = Vy;
+    blendVelocityInWindow(0.08f, flingVx, flingVy);
+    const float speed = std::sqrt(flingVx * flingVx + flingVy * flingVy);
+    if (!HasSample || speed < SpeedThreshold) {
+      Coasting = false;
+      CoastVx = CoastVy = 0.0f;
+      return;
+    }
+
+    CoastVx = flingVx;
+    CoastVy = flingVy;
+    Coasting = true;
+    LastTickTime = Clock::now();
+  }
+
+  /**
+   * 每帧：吐出 Pending（拖动）+ 若 Coasting 则叠加 v·dt 并刹车。
+   * 结果交给 arcball.drag(outDx, outDy, ...)。
+   * @return 本帧有位移或仍在滑行
    */
   bool tick(float& outDx, float& outDy) {
     outDx = outDy = 0.0f;
-    if (!active_) return false;
 
     const Clock::time_point now = Clock::now();
-    float dt = secondsBetween(lastTickTime_, now);
+    float dt = secondsBetween(LastTickTime, now);
     if (dt < 1e-4f) dt = 1e-4f;
     if (dt > 0.05f) dt = 0.05f;
-    lastTickTime_ = now;
+    LastTickTime = now;
 
-    // 等效 60fps 下每帧吃 dampingFactor_：keep=(1-d)^frames
-    const float frames = dt * 60.0f;
-    const float applyFrac = 1.0f - std::pow(1.0f - dampingFactor_, frames);
-    outDx = resX_ * applyFrac;
-    outDy = resY_ * applyFrac;
-    resX_ -= outDx;
-    resY_ -= outDy;
+    // 拖动路径：全量吐出 pending（100% 跟手）
+    outDx += PendingDx;
+    outDy += PendingDy;
+    PendingDx = PendingDy = 0.0f;
 
-    if (!touching_ && std::fabs(resX_) < stopEpsilon_ && std::fabs(resY_) < stopEpsilon_) {
-      resX_ = resY_ = 0.0f;
-      active_ = false;
+    // 松手滑行：位移 += v·dt，再按 BrakeFactor 衰减
+    if (Coasting && !Touching) {
+      outDx += CoastVx * dt;
+      outDy += CoastVy * dt;
+
+      const float frames = dt * 60.0f;
+      const float keep = std::pow(1.0f - BrakeFactor, frames);
+      CoastVx *= keep;
+      CoastVy *= keep;
+
+      const float speed = std::sqrt(CoastVx * CoastVx + CoastVy * CoastVy);
+      if (speed < StopSpeed) {
+        CoastVx = CoastVy = 0.0f;
+        Coasting = false;
+      }
     }
-    return (outDx != 0.0f || outDy != 0.0f) || active_;
+
+    return (outDx != 0.0f || outDy != 0.0f) || Coasting;
   }
 
-  bool coasting() const { return active_ && !touching_; }
-  bool touching() const { return touching_; }
-  bool active() const { return active_; }
+  bool coasting() const { return Coasting; }
+  bool touching() const { return Touching; }
+  bool active() const {
+    return Coasting || PendingDx != 0.0f || PendingDy != 0.0f || Touching;
+  }
 
-  float beginX() const { return beginX_; }
-  float beginY() const { return beginY_; }
-  float lastX() const { return lastX_; }
-  float lastY() const { return lastY_; }
-  float residualX() const { return resX_; }
-  float residualY() const { return resY_; }
-
-  // 兼容旧调用名
-  float vx() const { return resX_; }
-  float vy() const { return resY_; }
+  float beginX() const { return BeginX; }
+  float beginY() const { return BeginY; }
+  float lastX() const { return LastX; }
+  float lastY() const { return LastY; }
+  float vx() const { return Vx; }
+  float vy() const { return Vy; }
 
  private:
+  void pushSample(float vx, float vy, Clock::time_point t) {
+    Samples[SampleWrite] = Sample{vx, vy, t};
+    SampleWrite = (SampleWrite + 1) % kMaxSamples;
+    if (SampleCount < kMaxSamples) ++SampleCount;
+  }
+
+  /** 近 windowSec 内样本按「越近权重越大」混合，得到松手瞬时速度 */
+  void blendVelocityInWindow(float windowSec, float& outVx, float& outVy) const {
+    if (SampleCount <= 0) return;
+    const Clock::time_point now = LastSampleTime;
+    float wSum = 0.0f;
+    float sx = 0.0f;
+    float sy = 0.0f;
+    for (int i = 0; i < SampleCount; ++i) {
+      const int idx = (SampleWrite - 1 - i + kMaxSamples * 4) % kMaxSamples;
+      const Sample& s = Samples[idx];
+      const float age = secondsBetween(s.t, now);
+      if (age > windowSec) break;
+      const float w = 1.0f - (age / windowSec);
+      sx += s.vx * w;
+      sy += s.vy * w;
+      wSum += w;
+    }
+    if (wSum > 1e-6f) {
+      outVx = sx / wSum;
+      outVy = sy / wSum;
+    }
+  }
+
   static float secondsBetween(Clock::time_point a, Clock::time_point b) {
     return std::chrono::duration<float>(b - a).count();
   }
-
-  bool touching_ = false;
-  bool active_ = false;
-  float resX_ = 0.0f;
-  float resY_ = 0.0f;
-  float beginX_ = 0.0f;
-  float beginY_ = 0.0f;
-  float lastX_ = 0.0f;
-  float lastY_ = 0.0f;
-  Clock::time_point lastTickTime_{};
-
-  // 现行默认（对外 set_orbit_feel 可改）
-  float dampingFactor_ = 0.04f;
-  float stopEpsilon_ = 0.35f;  // px
 };
 
 #endif /* CORE_GL_INERTIA_H_ */

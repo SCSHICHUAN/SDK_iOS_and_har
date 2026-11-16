@@ -17,8 +17,8 @@ declare module 'libcore_napi.so' {
     glViewerRender(handle: bigint): void;
     glViewerOrbit(handle: bigint, dx: number, dy: number): void;
     glViewerOrbitEnd(handle: bigint): void;
-    /** Defaults: sensitivity=15, dampingFactor=0.04 */
-    glViewerSetOrbitFeel(handle: bigint, sensitivity: number, dampingFactor: number): void;
+    /** Defaults: sensitivity=1, brakeFactor=0.10 (drag ratio ⊥ release brake) */
+    glViewerSetOrbitFeel(handle: bigint, sensitivity: number, brakeFactor: number): void;
     glViewerZoom(handle: bigint, scale: number): void;
     glViewerDolly(handle: bigint, amount: number): void;
     glViewerLightMoveX(handle: bigint, amount: number): void;
