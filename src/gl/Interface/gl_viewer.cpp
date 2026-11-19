@@ -11,12 +11,15 @@
 #include "core/gl_viewer.h"
 
 #include "animator.h"
+#include "ray.h"
 #include "render.h"
 #include "renderer_data.h"
 #include "viewport_input.h"
 
 #include <memory>
 #include <string>
+
+#include <glm/gtc/matrix_inverse.hpp>
 
 #if defined(__ANDROID__)
 #include <android/log.h>
@@ -157,6 +160,43 @@ extern "C" void core_gl_viewer_set_point_light_color(CoreGlViewer* viewer, float
 extern "C" void core_gl_viewer_camera_pan(CoreGlViewer* viewer, float amount) {
   if (!viewer) return;
   ViewportInput::cameraPan(viewer->data, amount);
+}
+
+extern "C" void core_gl_viewer_explode(CoreGlViewer* viewer, float factor) {
+  if (!viewer) return;
+  if (!viewer->data.explode.prepared()) {
+    viewer->data.explode.prepare(viewer->data.model);
+  }
+  viewer->data.explode.explode(factor > 1e-4f ? factor : 1.0f);
+}
+
+extern "C" void core_gl_viewer_implode(CoreGlViewer* viewer) {
+  if (!viewer) return;
+  viewer->data.explode.implode();
+}
+
+extern "C" int core_gl_viewer_pick(CoreGlViewer* viewer, float sx, float sy) {
+  if (!viewer || !viewer->data.model.loaded()) return -1;
+  if (!viewer->data.pick.prepared()) {
+    viewer->data.pick.prepare(viewer->data.model);
+  }
+  const glm::mat4 viewProj = viewer->data.lastProj * viewer->data.lastView;
+  const glm::mat4 invVP = glm::inverse(viewProj);
+  const Ray ray = Ray::fromScreen(sx, sy, viewer->data.width, viewer->data.height, invVP);
+  const Explode* ex =
+      viewer->data.explode.prepared() ? &viewer->data.explode : nullptr;
+  viewer->data.pick.select(ray, viewer->data.lastModel, ex);
+  return viewer->data.pick.selected();
+}
+
+extern "C" int core_gl_viewer_selected(CoreGlViewer* viewer) {
+  if (!viewer) return -1;
+  return viewer->data.pick.selected();
+}
+
+extern "C" void core_gl_viewer_clear_selection(CoreGlViewer* viewer) {
+  if (!viewer) return;
+  viewer->data.pick.clearSelection();
 }
 
 extern "C" void core_gl_viewer_render(CoreGlViewer* viewer) {

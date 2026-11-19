@@ -24,12 +24,16 @@
 
 extern "C" const char* core_gl_stored_model_path();
 extern "C" const uint8_t* core_gl_stored_model_bytes(size_t* outSize);
+extern "C" const char* core_gl_stored_model_hint();
 
 bool LoadStoredModel(CoreGlViewer* viewer) {
   size_t nbytes = 0;
   if (const uint8_t* bytes = core_gl_stored_model_bytes(&nbytes)) {
-    int rc = core_gl_viewer_load_memory(viewer, bytes, static_cast<int>(nbytes), ".obj");
-    OH_LOG_INFO(LOG_APP, "load memory %{public}zu bytes -> %{public}d", nbytes, rc);
+    const char* hint = core_gl_stored_model_hint();
+    int rc = core_gl_viewer_load_memory(viewer, bytes, static_cast<int>(nbytes),
+                                        hint ? hint : ".obj");
+    OH_LOG_INFO(LOG_APP, "load memory %{public}zu bytes hint=%{public}s -> %{public}d", nbytes,
+                hint ? hint : ".obj", rc);
     return rc == 0;
   }
   if (const char* path = core_gl_stored_model_path()) {
@@ -365,6 +369,62 @@ extern "C" napi_value GlLightDragAll(napi_env env, napi_callback_info info) {
     SurfaceState& st = kv.second;
     if (!st.viewer) continue;
     core_gl_viewer_light_drag(st.viewer, static_cast<float>(dx), static_cast<float>(dy));
+  }
+  return nullptr;
+}
+
+extern "C" napi_value GlExplodeAll(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value args[1];
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  double factor = 1.0;
+  if (argc >= 1) napi_get_value_double(env, args[0], &factor);
+  std::lock_guard<std::mutex> lock(g_mu);
+  for (auto& kv : g_surfaces) {
+    SurfaceState& st = kv.second;
+    if (!st.viewer) continue;
+    core_gl_viewer_explode(st.viewer, static_cast<float>(factor));
+  }
+  return nullptr;
+}
+
+extern "C" napi_value GlImplodeAll(napi_env /*env*/, napi_callback_info /*info*/) {
+  std::lock_guard<std::mutex> lock(g_mu);
+  for (auto& kv : g_surfaces) {
+    SurfaceState& st = kv.second;
+    if (!st.viewer) continue;
+    core_gl_viewer_implode(st.viewer);
+  }
+  return nullptr;
+}
+
+/** Screen pick (sx/sy in surface pixels, top-left). Returns mesh id or -1. */
+extern "C" napi_value GlPickAll(napi_env env, napi_callback_info info) {
+  size_t argc = 2;
+  napi_value args[2];
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  double sx = 0, sy = 0;
+  if (argc >= 1) napi_get_value_double(env, args[0], &sx);
+  if (argc >= 2) napi_get_value_double(env, args[1], &sy);
+  int hit = -1;
+  std::lock_guard<std::mutex> lock(g_mu);
+  for (auto& kv : g_surfaces) {
+    SurfaceState& st = kv.second;
+    if (!st.viewer) continue;
+    hit = core_gl_viewer_pick(st.viewer, static_cast<float>(sx), static_cast<float>(sy));
+    break;
+  }
+  napi_value result;
+  napi_create_int32(env, hit, &result);
+  return result;
+}
+
+extern "C" napi_value GlClearSelectionAll(napi_env /*env*/, napi_callback_info /*info*/) {
+  std::lock_guard<std::mutex> lock(g_mu);
+  for (auto& kv : g_surfaces) {
+    SurfaceState& st = kv.second;
+    if (!st.viewer) continue;
+    core_gl_viewer_clear_selection(st.viewer);
   }
   return nullptr;
 }

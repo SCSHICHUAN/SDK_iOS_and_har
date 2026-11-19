@@ -1,24 +1,25 @@
-import { ModelGLPage } from './ModelGLPage';
+import { BrowseAsset, ModelGLPage } from './ModelGLPage';
+
+interface ListRow {
+  title: string;
+  asset: BrowseAsset;
+}
 
 @Entry
 @Component
 struct Index {
-  private readonly rows: string[] = ['立方体'];
+  private readonly rows: ListRow[] = [
+    { title: '立方体', asset: 'cube' },
+    { title: 'SU7', asset: 'su7' },
+    { title: 'Benz', asset: 'benz' },
+  ];
   private pageStack: NavPathStack = new NavPathStack();
-  private didAutoPush: boolean = false;
-
-  aboutToAppear(): void {
-    if (this.didAutoPush) {
-      return;
-    }
-    this.didAutoPush = true;
-    this.pageStack.pushPath({ name: 'cube' });
-  }
+  @State private currentAsset: BrowseAsset = 'cube';
 
   @Builder
   private pageMap(name: string) {
-    if (name === 'cube') {
-      ModelGLPage();
+    if (name === 'browse') {
+      ModelGLPage({ asset: this.currentAsset });
     }
   }
 
@@ -41,10 +42,10 @@ struct Index {
     Navigation(this.pageStack) {
       List() {
         ListItemGroup() {
-          ForEach(this.rows, (title: string) => {
+          ForEach(this.rows, (row: ListRow) => {
             ListItem() {
               Row() {
-                Text(title)
+                Text(row.title)
                   .fontSize(17)
                   .fontColor(Color.Black)
                   .layoutWeight(1)
@@ -57,9 +58,10 @@ struct Index {
               .padding({ left: 16, right: 12 })
             }
             .onClick(() => {
-              this.pageStack.pushPath({ name: 'cube' });
+              this.currentAsset = row.asset;
+              this.pageStack.pushPath({ name: 'browse' });
             })
-          }, (title: string) => title)
+          }, (row: ListRow) => row.asset)
         }
         .backgroundColor(Color.White)
         .borderRadius(10)

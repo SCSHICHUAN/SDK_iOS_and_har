@@ -53,4 +53,19 @@ public final class CoreNative {
 
   /** Drag point light with touch deltas. */
   public static native void glViewerLightDrag(long handle, float dx, float dy);
+
+  /** Explode view (easeOut). factor relative to model radius; typical 1. */
+  public static native void glViewerExplode(long handle, float factor);
+
+  public static native void glViewerImplode(long handle);
+
+  /**
+   * Screen-space pick (pixels, top-left origin). Returns mesh index, or -1.
+   * Selected mesh is highlighted (industrial blue).
+   */
+  public static native int glViewerPick(long handle, float sx, float sy);
+
+  public static native int glViewerSelected(long handle);
+
+  public static native void glViewerClearSelection(long handle);
 }

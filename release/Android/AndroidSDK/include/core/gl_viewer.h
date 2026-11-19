@@ -1,7 +1,9 @@
 //
 // gl_viewer.h — GLES 模型浏览器 C ABI（Swift / JNI / NAPI）
 //
-// 分层：本头文件 = 跨语言边界；RendererData = 一帧渲染；Pro = Surface/FBO。
+// 分层：本头文件 = 跨语言边界；
+//       RendererData = 场景静态数据；Render = 整帧提交；Animator = 播放；
+//       Pro = Surface/FBO。
 // 约定：create/load/render 前须 makeCurrent GLES3；viewer==NULL 安全空操作。
 //
 
@@ -14,7 +16,7 @@ extern "C" {
 
 /**
  * 不透明句柄。
- * 内部持有 RendererData（场景状态 + render）。
+ * 内部持有 RendererData + Animator；画帧走 Render::frame。
  */
 typedef struct CoreGlViewer CoreGlViewer;
 
@@ -72,7 +74,7 @@ void core_gl_viewer_resize(CoreGlViewer* viewer, int width, int height);
 
 /**
  * 功能：向当前绑定的 framebuffer 画一帧（Pro FBO 或默认 FB）。
- *       内含 inertia.tick → arcball.drag、相机、灯光、Model::Draw。
+ *       先 Animator 插值骨矩阵（若有动画），再 Render::frame(RendererData, …)。
  * 参数：
  *   viewer — 实例句柄；NULL 则空操作
  * 输入：viewer；当前 FBO / GLES 上下文须已就绪
@@ -148,6 +150,16 @@ void core_gl_viewer_dolly(CoreGlViewer* viewer, float amount);
 void core_gl_viewer_light_move_x(CoreGlViewer* viewer, float amount);
 
 /**
+ * 功能：点光源沿世界 Z 轴平移（控制灯时的前进/后退）。
+ * 参数：
+ *   viewer — 实例句柄；NULL 则空操作
+ *   amount — >0 沿 +Z；<0 沿 -Z
+ * 输入：viewer, amount
+ * 返回：无
+ */
+void core_gl_viewer_light_move_z(CoreGlViewer* viewer, float amount);
+
+/**
  * 功能：按屏幕风格 XY 增量拖动点光源（由 Pro 换算后传入）。
  * 参数：
  *   viewer — 实例句柄；NULL 则空操作
@@ -159,6 +171,61 @@ void core_gl_viewer_light_move_x(CoreGlViewer* viewer, float amount);
 void core_gl_viewer_light_drag(CoreGlViewer* viewer, float dx, float dy);
 
 /**
+ * 功能：开关平行光（太阳）。
+ * 参数：enabled — 非 0 开；0 关
+ */
+void core_gl_viewer_set_dir_light(CoreGlViewer* viewer, int enabled);
+
+/**
+ * 功能：开关聚光灯（手电，跟相机朝向）。
+ * 参数：enabled — 非 0 开；0 关
+ */
+void core_gl_viewer_set_spot_light(CoreGlViewer* viewer, int enabled);
+
+/**
+ * 功能：开关点光源（灯）。
+ * 参数：enabled — 非 0 开；0 关
+ */
+void core_gl_viewer_set_point_light(CoreGlViewer* viewer, int enabled);
+
+/**
+ * 功能：设置点光源颜色（色卡，RGB 0~1）。
+ */
+void core_gl_viewer_set_point_light_color(CoreGlViewer* viewer, float r, float g, float b);
+
+/**
+ * 功能：相机左右平移位置（沿水平 Right）。
+ * 参数：amount — >0 向右；<0 向左
+ */
+void core_gl_viewer_camera_pan(CoreGlViewer* viewer, float amount);
+
+/**
+ * 功能：爆炸视图（easeOut）。factor 为相对半径倍数，常用 1。
+ */
+void core_gl_viewer_explode(CoreGlViewer* viewer, float factor);
+
+/**
+ * 功能：爆炸复位（合拢）。
+ */
+void core_gl_viewer_implode(CoreGlViewer* viewer);
+
+/**
+ * 功能：屏幕点选取零件（像素坐标，左上为原点，与 UIKit 一致）。
+ * 返回：命中 mesh 下标；未中 / 失败 → -1。选中件会高亮。
+ */
+int core_gl_viewer_pick(CoreGlViewer* viewer, float sx, float sy);
+
+/**
+ * 功能：当前选中 mesh 下标；无选中 → -1。
+ */
+int core_gl_viewer_selected(CoreGlViewer* viewer);
+
+/**
+ * 功能：清除选取高亮。
+ */
+void core_gl_viewer_clear_selection(CoreGlViewer* viewer);
+
+/**
  * 功能：查询当前模型里有多少条动画 clip（load 后有效）。
  * 参数：
  *   viewer — 实例句柄；NULL 返回 0
@@ -166,6 +233,16 @@ void core_gl_viewer_light_drag(CoreGlViewer* viewer, float dx, float dy);
  * 返回：clip 数量；无模型 / 无动画 → 0
  */
 int core_gl_viewer_animation_count(CoreGlViewer* viewer);
+
+/**
+ * 功能：取第 index 条动画的 Assimp 源名字（供下拉显示）。
+ * 参数：
+ *   viewer — 实例句柄；NULL 返回 NULL
+ *   index  — clip 下标，范围 [0, animation_count)
+ * 输入：viewer, index
+ * 返回：UTF-8 C 字符串指针（寿命随当前已 load 的 Model）；越界 / 无 → NULL
+ */
+const char* core_gl_viewer_animation_name(CoreGlViewer* viewer, int index);
 
 /**
  * 功能：选中并播放第 index 条动画（用户点「开始」时调这个）。

@@ -200,6 +200,32 @@ void core_gl_viewer_set_point_light_color(CoreGlViewer* viewer, float r, float g
 void core_gl_viewer_camera_pan(CoreGlViewer* viewer, float amount);
 
 /**
+ * 功能：爆炸视图（easeOut）。factor 为相对半径倍数，常用 1。
+ */
+void core_gl_viewer_explode(CoreGlViewer* viewer, float factor);
+
+/**
+ * 功能：爆炸复位（合拢）。
+ */
+void core_gl_viewer_implode(CoreGlViewer* viewer);
+
+/**
+ * 功能：屏幕点选取零件（像素坐标，左上为原点，与 UIKit 一致）。
+ * 返回：命中 mesh 下标；未中 / 失败 → -1。选中件会高亮。
+ */
+int core_gl_viewer_pick(CoreGlViewer* viewer, float sx, float sy);
+
+/**
+ * 功能：当前选中 mesh 下标；无选中 → -1。
+ */
+int core_gl_viewer_selected(CoreGlViewer* viewer);
+
+/**
+ * 功能：清除选取高亮。
+ */
+void core_gl_viewer_clear_selection(CoreGlViewer* viewer);
+
+/**
  * 功能：查询当前模型里有多少条动画 clip（load 后有效）。
  * 参数：
  *   viewer — 实例句柄；NULL 返回 0

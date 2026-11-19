@@ -47,6 +47,23 @@ export function glLightDragAll(dx: number, dy: number): void {
   coreNapi.glLightDragAll(dx, dy);
 }
 
+export function glExplodeAll(factor: number = 1): void {
+  coreNapi.glExplodeAll(factor);
+}
+
+export function glImplodeAll(): void {
+  coreNapi.glImplodeAll();
+}
+
+/** Screen pick (surface pixels); returns mesh id or -1. */
+export function glPickAll(sx: number, sy: number): number {
+  return coreNapi.glPickAll(sx, sy);
+}
+
+export function glClearSelectionAll(): void {
+  coreNapi.glClearSelectionAll();
+}
+
 export function glViewerCreate(): bigint {
   return coreNapi.glViewerCreate();
 }

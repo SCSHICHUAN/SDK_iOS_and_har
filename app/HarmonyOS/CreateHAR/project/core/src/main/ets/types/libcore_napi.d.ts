@@ -10,6 +10,11 @@ declare module 'libcore_napi.so' {
     glDollyAll(amount: number): void;
     glLightMoveXAll(amount: number): void;
     glLightDragAll(dx: number, dy: number): void;
+    glExplodeAll(factor: number): void;
+    glImplodeAll(): void;
+    /** Screen pick in surface pixels; returns mesh id or -1. */
+    glPickAll(sx: number, sy: number): number;
+    glClearSelectionAll(): void;
     glViewerCreate(): bigint;
     glViewerDestroy(handle: bigint): void;
     glViewerLoad(handle: bigint, path: string): number;

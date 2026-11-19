@@ -29,6 +29,8 @@ final class CubeViewController: UIViewController {
     private let asset: ModelBrowseAsset
     private let glView = ModelGLView(frame: .zero)
     private let hud = UILabel()
+    private var pickBanner: PartPickBanner?
+    private var pickHideWorkItem: DispatchWorkItem?
     private let forwardBtn = UIButton(type: .system)
     private let backBtn = UIButton(type: .system)
     private let leftBtn = UIButton(type: .system)
@@ -37,6 +39,7 @@ final class CubeViewController: UIViewController {
     private let torchBtn = UIButton(type: .system)
     private let lampBtn = UIButton(type: .system)
     private let controlBtn = UIButton(type: .system)
+    private let explodeBtn = UIButton(type: .system)
     private var colorChips: [UIButton] = []
     private var colorRow: UIStackView!
     private var topBar: UIStackView!
@@ -44,6 +47,7 @@ final class CubeViewController: UIViewController {
     private var holdTimer: Timer?
     private var holdTick: (() -> Void)?
     private var dragControlsLight = false
+    private var exploded = false
     private var sunOn = true
     private var torchOn = true
     private var lampOn = true
@@ -125,9 +129,20 @@ final class CubeViewController: UIViewController {
             self.glView.dragControlsLight = self.dragControlsLight
             self.refreshButtonStates()
         }
+        // 爆炸 / 复位：零件沿相对中心拉开；点选零件高亮
+        configureStateButton(explodeBtn, title: "爆炸") { [weak self] in
+            guard let self else { return }
+            self.exploded.toggle()
+            if self.exploded {
+                self.glView.explode()
+            } else {
+                self.glView.implode()
+            }
+            self.refreshButtonStates()
+        }
 
         let moveRow = UIStackView(arrangedSubviews: [
-            forwardBtn, backBtn, leftBtn, rightBtn, controlBtn,
+            forwardBtn, backBtn, leftBtn, rightBtn, controlBtn, explodeBtn,
         ])
         moveRow.axis = .horizontal
         moveRow.spacing = 8
@@ -154,6 +169,11 @@ final class CubeViewController: UIViewController {
         hud.font = .preferredFont(forTextStyle: .footnote)
         hud.textAlignment = .center
         view.addSubview(hud)
+
+        // 每次点选初始化一个 PartPickBanner（工业蓝），中下展示 2s 后消失
+        glView.onPick = { [weak self] meshId in
+            self?.presentPickBanner(meshId: meshId)
+        }
 
         NSLayoutConstraint.activate([
             glView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -182,6 +202,31 @@ final class CubeViewController: UIViewController {
         refreshButtonStates()
     }
 
+    /// 点击命中：初始化反馈对象；未中则清高亮并不弹条。
+    private func presentPickBanner(meshId: Int) {
+        pickHideWorkItem?.cancel()
+        pickBanner?.dismiss(animated: false)
+        pickBanner = nil
+
+        guard meshId >= 0 else { return }
+
+        // 每次点击新建一个对象（配件选中反馈）
+        let banner = PartPickBanner(meshId: meshId)
+        banner.attach(to: view)
+        pickBanner = banner
+
+        let work = DispatchWorkItem { [weak self, weak banner] in
+            guard let self, let banner, self.pickBanner === banner else { return }
+            banner.dismiss(animated: true) { [weak self] in
+                if self?.pickBanner === banner {
+                    self?.pickBanner = nil
+                }
+            }
+        }
+        pickHideWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: work)
+    }
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         applyDarkNavBar()
@@ -193,6 +238,9 @@ final class CubeViewController: UIViewController {
         // 必须停 DisplayLink：否则 CADisplayLink 强持有 GLView，退页后仍 60fps → 发烫/泄漏
         glView.pauseRendering()
         stopHold()
+        pickHideWorkItem?.cancel()
+        pickBanner?.dismiss(animated: false)
+        pickBanner = nil
         animDropdown?.dismiss()
         navigationController?.navigationBar.tintColor = nil
         navigationItem.standardAppearance = nil
@@ -236,7 +284,7 @@ final class CubeViewController: UIViewController {
                 return .failure("Assimp load failed: \(path)")
             }
             let n = glView.animationCount()
-            return .success("Documents \(asset.title) — \(n) clips · drag orbit, pinch zoom")
+            return .success("Documents \(asset.title) — \(n) clips · tap 选件 · 爆炸拆解")
         } catch {
             return .failure("Bundle→Documents failed: \(error.localizedDescription)")
         }
@@ -432,6 +480,8 @@ final class CubeViewController: UIViewController {
         applyToggleStyle(torchBtn, on: torchOn)
         applyToggleStyle(lampBtn, on: lampOn)
         applyToggleStyle(controlBtn, on: dragControlsLight)
+        explodeBtn.setTitle(exploded ? "复位" : "爆炸", for: .normal)
+        applyToggleStyle(explodeBtn, on: exploded)
         colorRow?.alpha = lampOn ? 1 : 0.35
         colorRow?.isUserInteractionEnabled = lampOn
         for (i, chip) in colorChips.enumerated() {
@@ -487,5 +537,59 @@ final class CubeViewController: UIViewController {
         holdTimer?.invalidate()
         holdTimer = nil
         holdTick = nil
+    }
+}
+
+/// 点选反馈：每次点击初始化一个实例，中下展示「配件ID：」，工业蓝，约 2s 消失。
+final class PartPickBanner {
+    let meshId: Int
+    private let label = UILabel()
+
+    /// CAD 常见选中蓝
+    private static let industrialBlue = UIColor(red: 0.20, green: 0.48, blue: 0.98, alpha: 1)
+
+    init(meshId: Int) {
+        self.meshId = meshId
+        label.text = "  配件ID：\(meshId)  "
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textAlignment = .center
+        label.backgroundColor = Self.industrialBlue.withAlphaComponent(0.92)
+        label.layer.cornerRadius = 10
+        label.clipsToBounds = true
+        label.alpha = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+    }
+
+    func attach(to host: UIView) {
+        host.addSubview(label)
+        // 屏幕中下：相对安全区中心下移
+        let offset = max(host.bounds.height * 0.18, 120)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: host.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: host.safeAreaLayoutGuide.centerYAnchor, constant: offset),
+            label.heightAnchor.constraint(greaterThanOrEqualToConstant: 40),
+            label.widthAnchor.constraint(greaterThanOrEqualToConstant: 140),
+        ])
+        host.layoutIfNeeded()
+        UIView.animate(withDuration: 0.18) {
+            self.label.alpha = 1
+        }
+    }
+
+    func dismiss(animated: Bool, completion: (() -> Void)? = nil) {
+        let finish = {
+            self.label.removeFromSuperview()
+            completion?()
+        }
+        guard animated else {
+            finish()
+            return
+        }
+        UIView.animate(withDuration: 0.25, animations: {
+            self.label.alpha = 0
+        }, completion: { _ in
+            finish()
+        })
     }
 }

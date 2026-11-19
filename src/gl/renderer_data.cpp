@@ -53,6 +53,8 @@ void RendererData::destroy() {
   if (lightCubeVAO) glDeleteVertexArrays(1, &lightCubeVAO);
   if (lightCubeVBO) glDeleteBuffers(1, &lightCubeVBO);
   lightCubeVAO = lightCubeVBO = 0;
+  explode.clear();
+  pick.clear();
   model.destroy();
   lampShader.destroy();
   shader.destroy();

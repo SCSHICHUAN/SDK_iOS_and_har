@@ -44,7 +44,9 @@ target_include_directories(core
 # Layout:
 #   gl/Interface/           gl_viewer.cpp, gl_platform.h
 #   gl/viewport_controls/   camera.h, arcball.h
-#   gl/                     mesh/model/shader/renderer_data, shaders/, models/
+#   gl/model_load/          mesh/model/animation/animator/debut
+#   gl/interaction/         explode/pick/ray
+#   gl/                     render/renderer_data/shader, shaders/, models/
 option(CORE_ENABLE_GL "Build GLES model viewer into core.a" OFF)
 if(CORE_ENABLE_GL)
   set(CORE_GL_SHADERS_DIR "${SDK_SRC_ROOT}/gl/shaders")
@@ -71,9 +73,11 @@ if(CORE_ENABLE_GL)
     "${SDK_SRC_ROOT}/gl/renderer_data.cpp"
     "${SDK_SRC_ROOT}/gl/render.cpp"
     "${SDK_SRC_ROOT}/gl/viewport_input.cpp"
-    "${SDK_SRC_ROOT}/gl/model.cpp"
-    "${SDK_SRC_ROOT}/gl/animation.cpp"
-    "${SDK_SRC_ROOT}/gl/animator.cpp"
+    "${SDK_SRC_ROOT}/gl/model_load/model.cpp"
+    "${SDK_SRC_ROOT}/gl/model_load/animation.cpp"
+    "${SDK_SRC_ROOT}/gl/model_load/animator.cpp"
+    "${SDK_SRC_ROOT}/gl/interaction/explode.cpp"
+    "${SDK_SRC_ROOT}/gl/interaction/pick.cpp"
     "${CORE_GL_EMBEDDED_SHADERS_H}"
   )
   target_include_directories(core
@@ -81,6 +85,8 @@ if(CORE_ENABLE_GL)
       "${SDK_SRC_ROOT}/gl"
       "${SDK_SRC_ROOT}/gl/Interface"
       "${SDK_SRC_ROOT}/gl/viewport_controls"
+      "${SDK_SRC_ROOT}/gl/model_load"
+      "${SDK_SRC_ROOT}/gl/interaction"
       "${CMAKE_CURRENT_BINARY_DIR}/generated"
       "${SDK_SRC_ROOT}/libs"
       "${SDK_SRC_ROOT}/libs/assimp/include"

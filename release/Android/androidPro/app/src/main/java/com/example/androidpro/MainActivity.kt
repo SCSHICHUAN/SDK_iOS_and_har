@@ -27,12 +27,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,13 +45,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import java.io.File
 import kotlinx.coroutines.delay
 
@@ -61,28 +65,22 @@ private val IosLabel = Color.Black
 private val IosChevron = Color(0xFFC7C7CC)
 private val IosNavBg = Color(0xFFF9F9F9)
 private val IosChipBg = Color.Black.copy(alpha = 0.45f)
+/** CAD / industrial selection blue */
+private val IndustrialBlue = Color(0xFF337AFB)
 
-/**
- * Mainstream Android:
- *   NavHost (≈ UINavigationController)
- *     ├─ list  (LazyColumn ≈ UITableView)
- *     └─ cube  (push with slide)
- */
+private enum class BrowseAsset(val route: String, val title: String) {
+    Cube("cube", "立方体"),
+    Su7("su7", "SU7"),
+    Benz("benz", "Benz"),
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val modelPath = copyAssetModel()
 
         setContent {
             val nav = rememberNavController()
-            var didAutoPush by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) {
-                if (!didAutoPush) {
-                    didAutoPush = true
-                    nav.navigate("cube")
-                }
-            }
             NavHost(
                 navController = nav,
                 startDestination = "list",
@@ -114,32 +112,28 @@ class MainActivity : ComponentActivity() {
                 },
             ) {
                 composable("list") {
-                    RootListScreen(onOpenCube = { nav.navigate("cube") })
+                    RootListScreen(onOpen = { asset -> nav.navigate("browse/${asset.route}") })
                 }
-                composable("cube") {
-                    CubeScreen(
-                        modelPath = modelPath,
+                composable(
+                    route = "browse/{asset}",
+                    arguments = listOf(navArgument("asset") { type = NavType.StringType }),
+                ) { entry ->
+                    val key = entry.arguments?.getString("asset") ?: "cube"
+                    val asset = BrowseAsset.entries.find { it.route == key } ?: BrowseAsset.Cube
+                    BrowseScreen(
+                        asset = asset,
                         onBack = { nav.popBackStack() },
                     )
                 }
             }
         }
     }
-
-    private fun copyAssetModel(): String {
-        for (name in listOf("cube.obj", "cube.mtl", "box.png")) {
-            assets.open("models/$name").use { input ->
-                File(filesDir, name).outputStream().use { output -> input.copyTo(output) }
-            }
-        }
-        return File(filesDir, "cube.obj").absolutePath
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RootListScreen(onOpenCube: () -> Unit) {
-    val rows = listOf("立方体")
+private fun RootListScreen(onOpen: (BrowseAsset) -> Unit) {
+    val rows = BrowseAsset.entries
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -165,17 +159,17 @@ private fun RootListScreen(onOpenCube: () -> Unit) {
                         .clip(RoundedCornerShape(10.dp))
                         .background(IosCellBg),
                 ) {
-                    rows.forEach { title ->
+                    rows.forEach { asset ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp)
-                                .clickable { onOpenCube() }
+                                .clickable { onOpen(asset) }
                                 .padding(horizontal = 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = title,
+                                text = asset.title,
                                 color = IosLabel,
                                 fontSize = 17.sp,
                                 modifier = Modifier.weight(1f),
@@ -195,28 +189,61 @@ private fun RootListScreen(onOpenCube: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CubeScreen(modelPath: String, onBack: () -> Unit) {
+private fun BrowseScreen(asset: BrowseAsset, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val modelPath = remember(asset) { copyAssetModel(context, asset) }
     var glView by remember { mutableStateOf<ModelGLSurfaceView?>(null) }
     var dragLight by remember { mutableStateOf(false) }
-    val hud = "loaded cube.obj + box.png — drag orbit, pinch zoom"
+    var exploded by remember { mutableStateOf(false) }
+    var pickBannerId by remember { mutableStateOf<Int?>(null) }
+    val hud = remember(asset) {
+        when (asset) {
+            BrowseAsset.Cube -> "loaded cube — tap 选件 · 爆炸拆解"
+            BrowseAsset.Su7 -> "Documents SU7 — tap 选件 · 爆炸拆解"
+            BrowseAsset.Benz -> "Documents Benz — tap 选件 · 爆炸拆解"
+        }
+    }
 
-    // Like iOS: GL is full-bleed; translucent system bar + chips/HUD overlay — no black bands.
+    LaunchedEffect(pickBannerId) {
+        val id = pickBannerId ?: return@LaunchedEffect
+        delay(2000)
+        if (pickBannerId == id) pickBannerId = null
+    }
+
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(
             factory = { ctx ->
-                ModelGLSurfaceView(ctx).also {
-                    it.setModelPath(modelPath)
-                    glView = it
+                ModelGLSurfaceView(ctx).also { view ->
+                    view.setModelPath(modelPath)
+                    view.onPick = { meshId ->
+                        if (meshId >= 0) {
+                            pickBannerId = meshId
+                        } else {
+                            view.clearSelection()
+                            pickBannerId = null
+                        }
+                    }
+                    glView = view
                 }
             },
-            update = { view -> view.dragControlsLight = dragLight },
+            update = { view ->
+                view.dragControlsLight = dragLight
+                view.onPick = { meshId ->
+                    if (meshId >= 0) {
+                        pickBannerId = meshId
+                    } else {
+                        view.clearSelection()
+                        pickBannerId = null
+                    }
+                }
+            },
             modifier = Modifier.fillMaxSize(),
         )
         Scaffold(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text("立方体", color = Color.White) },
+                    title = { Text(asset.title, color = Color.White) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
@@ -244,7 +271,7 @@ private fun CubeScreen(modelPath: String, onBack: () -> Unit) {
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     IosChipButton(label = "前进", hold = true) { glView?.dolly(1f) }
                     IosChipButton(label = "后退", hold = true) { glView?.dolly(-1f) }
@@ -257,7 +284,34 @@ private fun CubeScreen(modelPath: String, onBack: () -> Unit) {
                             glView?.dragControlsLight = dragLight
                         }
                     }
+                    key(if (exploded) "reset" else "explode") {
+                        IosChipButton(
+                            label = if (exploded) "复位" else "爆炸",
+                            hold = false,
+                            active = exploded,
+                        ) {
+                            exploded = !exploded
+                            if (exploded) glView?.explode(1f) else glView?.implode()
+                        }
+                    }
                 }
+
+                // Mid-lower industrial-blue banner; new id each pick (≈ PartPickBanner)
+                pickBannerId?.let { meshId ->
+                    Text(
+                        text = "  配件ID：$meshId  ",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(top = 120.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(IndustrialBlue.copy(alpha = 0.92f))
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                }
+
                 Text(
                     text = hud,
                     color = Color.White,
@@ -274,7 +328,12 @@ private fun CubeScreen(modelPath: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun IosChipButton(label: String, hold: Boolean, onTick: () -> Unit) {
+private fun IosChipButton(
+    label: String,
+    hold: Boolean,
+    active: Boolean = false,
+    onTick: () -> Unit,
+) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     LaunchedEffect(pressed, hold) {
@@ -286,16 +345,43 @@ private fun IosChipButton(label: String, hold: Boolean, onTick: () -> Unit) {
     }
     Text(
         text = label,
-        color = Color.White,
+        color = if (active) Color.White else Color.White.copy(alpha = 0.9f),
         fontSize = 14.sp,
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(IosChipBg)
+            .background(if (active) Color.White.copy(alpha = 0.28f) else IosChipBg)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
                 onClick = { onTick() },
             )
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
     )
+}
+
+private fun copyAssetModel(context: android.content.Context, asset: BrowseAsset): String {
+    val files = context.filesDir
+    return when (asset) {
+        BrowseAsset.Cube -> {
+            for (name in listOf("cube.obj", "cube.mtl", "box.png")) {
+                context.assets.open("models/$name").use { input ->
+                    File(files, name).outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+            File(files, "cube.obj").absolutePath
+        }
+        BrowseAsset.Su7 -> copyGlb(context, "su7.glb", "su7")
+        BrowseAsset.Benz -> copyGlb(context, "benz_amg.glb", "benz")
+    }
+}
+
+private fun copyGlb(context: android.content.Context, assetName: String, folder: String): String {
+    val dir = File(context.filesDir, "models/$folder").apply { mkdirs() }
+    val dest = File(dir, assetName)
+    context.assets.open("models/$assetName").use { input ->
+        val srcSize = input.available().toLong()
+        if (dest.exists() && dest.length() == srcSize) return dest.absolutePath
+        dest.outputStream().use { output -> input.copyTo(output) }
+    }
+    return dest.absolutePath
 }

@@ -8,6 +8,7 @@
 
 static std::string g_modelPath;
 static std::vector<uint8_t> g_modelBytes;
+static std::string g_modelHint = ".obj";
 
 extern "C" void core_gl_reload_model_on_surfaces();
 extern "C" napi_value GlPresentAll(napi_env env, napi_callback_info info);
@@ -16,6 +17,10 @@ extern "C" napi_value GlOrbitEndAll(napi_env env, napi_callback_info info);
 extern "C" napi_value GlDollyAll(napi_env env, napi_callback_info info);
 extern "C" napi_value GlLightMoveXAll(napi_env env, napi_callback_info info);
 extern "C" napi_value GlLightDragAll(napi_env env, napi_callback_info info);
+extern "C" napi_value GlExplodeAll(napi_env env, napi_callback_info info);
+extern "C" napi_value GlImplodeAll(napi_env env, napi_callback_info info);
+extern "C" napi_value GlPickAll(napi_env env, napi_callback_info info);
+extern "C" napi_value GlClearSelectionAll(napi_env env, napi_callback_info info);
 extern "C" void core_gl_register_xcomponent(napi_env env, napi_value exports);
 
 namespace {
@@ -197,6 +202,15 @@ napi_value GlSetModelPath(napi_env env, napi_callback_info info) {
   g_modelPath.assign(path, pathLen);
   // Path load can resolve mtllib/textures; drop memory bytes so LoadStoredModel prefers path.
   g_modelBytes.clear();
+  // Hint from extension for memory fallback (.glb / .obj / …)
+  g_modelHint = ".obj";
+  if (pathLen >= 4) {
+    const char* ext = path + pathLen;
+    while (ext > path && ext[-1] != '.') --ext;
+    if (ext > path && ext[-1] == '.') {
+      g_modelHint.assign(ext - 1);
+    }
+  }
   core_gl_reload_model_on_surfaces();
   return nullptr;
 }
@@ -252,6 +266,10 @@ extern "C" const uint8_t* core_gl_stored_model_bytes(size_t* outSize) {
   return g_modelBytes.empty() ? nullptr : g_modelBytes.data();
 }
 
+extern "C" const char* core_gl_stored_model_hint() {
+  return g_modelHint.empty() ? ".obj" : g_modelHint.c_str();
+}
+
 EXTERN_C_START
 static napi_value Init(napi_env env, napi_value exports) {
   napi_property_descriptor desc[] = {
@@ -282,6 +300,11 @@ static napi_value Init(napi_env env, napi_value exports) {
       {"glDollyAll", nullptr, GlDollyAll, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glLightMoveXAll", nullptr, GlLightMoveXAll, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"glLightDragAll", nullptr, GlLightDragAll, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"glExplodeAll", nullptr, GlExplodeAll, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"glImplodeAll", nullptr, GlImplodeAll, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"glPickAll", nullptr, GlPickAll, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"glClearSelectionAll", nullptr, GlClearSelectionAll, nullptr, nullptr, nullptr, napi_default,
+       nullptr},
   };
   napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
 

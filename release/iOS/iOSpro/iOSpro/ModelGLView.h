@@ -11,6 +11,14 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)cameraPan:(float)amount;
 /// amount > 0 moves point light along +Z（控制灯时的前进/后退）.
 - (void)lightDolly:(float)amount;
+/// 爆炸 / 合拢。
+- (void)explode;
+- (void)implode;
+/// 屏幕点选取（UIKit 坐标）；返回 mesh 下标，未中 -1。
+- (NSInteger)pickAtX:(CGFloat)x y:(CGFloat)y;
+- (void)clearSelection;
+/// 单击点选结果回调：mesh 下标，未中为 -1。
+@property (nonatomic, copy, nullable) void (^onPick)(NSInteger meshId);
 /// 太阳（平行光）开关。
 - (void)setDirLightEnabled:(BOOL)enabled;
 /// 手电（聚光）开关。

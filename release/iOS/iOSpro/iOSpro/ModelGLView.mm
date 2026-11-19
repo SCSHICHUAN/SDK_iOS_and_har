@@ -68,6 +68,10 @@
   UIPinchGestureRecognizer *pinch =
       [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(onPinch:)];
   [self addGestureRecognizer:pinch];
+  UITapGestureRecognizer *tap =
+      [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(onTap:)];
+  [tap requireGestureRecognizerToFail:pan];
+  [self addGestureRecognizer:tap];
 
   // DisplayLink 在 didMoveToWindow / resumeRendering 里创建，避免离屏仍跑
 }
@@ -157,6 +161,25 @@
   if (_viewer) core_gl_viewer_light_move_z(_viewer, amount);
 }
 
+- (void)explode {
+  if (_viewer) core_gl_viewer_explode(_viewer, 1.0f);
+}
+
+- (void)implode {
+  if (_viewer) core_gl_viewer_implode(_viewer);
+}
+
+- (NSInteger)pickAtX:(CGFloat)x y:(CGFloat)y {
+  if (!_viewer) return -1;
+  // 逻辑点 → 像素（与 glViewport / Ray::fromScreen 一致）
+  const CGFloat scale = self.contentScaleFactor;
+  return (NSInteger)core_gl_viewer_pick(_viewer, (float)(x * scale), (float)(y * scale));
+}
+
+- (void)clearSelection {
+  if (_viewer) core_gl_viewer_clear_selection(_viewer);
+}
+
 - (void)setDirLightEnabled:(BOOL)enabled {
   if (_viewer) core_gl_viewer_set_dir_light(_viewer, enabled ? 1 : 0);
 }
@@ -200,6 +223,16 @@
   CGFloat s = gr.scale / MAX(_lastPinch, 0.0001);
   _lastPinch = gr.scale;
   if (_viewer) core_gl_viewer_zoom(_viewer, (float)s);
+}
+
+- (void)onTap:(UITapGestureRecognizer *)gr {
+  if (!_viewer || gr.state != UIGestureRecognizerStateEnded) return;
+  // 控灯时不点选，避免误触
+  if (_dragControlsLight) return;
+  CGPoint p = [gr locationInView:self];
+  const NSInteger hit = [self pickAtX:p.x y:p.y];
+  if (hit < 0) [self clearSelection];
+  if (self.onPick) self.onPick(hit);
 }
 
 - (void)onTick:(CADisplayLink *)link {

@@ -62,6 +62,11 @@ void onModelLoaded(RendererData& data) {
   const float yawStart = yawEnd - DebutSequence::kSpinRad;
   data.debut.start(startScale, endScale, endDistance, yawStart, yawEnd,
                    DebutSequence::kDurationSec);
+
+  // 爆炸 / 点选：按当前 mesh 顶点缓存零件盒与方向
+  data.explode.prepare(data.model);
+  data.pick.prepare(data.model);
+  data.pick.clearSelection();
 }
 
 void resize(RendererData& data, int width, int height) {

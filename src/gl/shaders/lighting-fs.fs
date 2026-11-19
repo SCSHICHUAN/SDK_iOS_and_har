@@ -65,6 +65,7 @@ uniform Material material;//物体材质结构体
 uniform bool useAlphaCutout;
 uniform bool hairSolidColor;
 uniform vec4 materialColor;
+uniform float selectBoost; // >0 选中件高亮（Pick）
 
 // function prototypes 函数原型
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 albedo, vec3 specColor);//计算平行光
@@ -113,7 +114,12 @@ void main()
         result += CalcPointLight(pointLights[i], norm, FragPos, viewDir, albedo, specColor);
     // phase 3: spot light
     result += CalcSpotLight(spotLight, norm, FragPos, viewDir, albedo, specColor);
-    
+
+    // 选中高亮：工业蓝（CAD 常见选中色），不改几何
+    if (selectBoost > 0.01) {
+        result = mix(result, vec3(0.20, 0.48, 0.98), 0.48 * clamp(selectBoost, 0.0, 1.0));
+    }
+
     FragColor = vec4(result, outAlpha);
 }
 

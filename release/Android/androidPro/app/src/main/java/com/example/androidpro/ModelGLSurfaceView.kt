@@ -3,6 +3,7 @@ package com.example.androidpro
 import android.content.Context
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import com.example.coresdk.CoreNative
@@ -11,7 +12,7 @@ import javax.microedition.khronos.opengles.GL10
 import kotlin.math.max
 
 /**
- * Platform surface (≈ iOS ModelGLView / AR SCRenderer):
+ * Platform surface (≈ iOS ModelGLView):
  * GLSurfaceView makes GLES context current on the GL thread before callbacks;
  * core only draws into the current framebuffer.
  */
@@ -23,13 +24,32 @@ class ModelGLSurfaceView @JvmOverloads constructor(
     private val renderer = ModelRenderer(context)
     private var lastX = 0f
     private var lastY = 0f
-    /** false = drag rotates box; true = drag moves point light. */
+    /** false = drag rotates model; true = drag moves point light. */
     @Volatile var dragControlsLight: Boolean = false
+    /** Fired on UI thread after tap pick (mesh id, or -1). */
+    var onPick: ((Int) -> Unit)? = null
+
     private val scaleDetector = ScaleGestureDetector(
         context,
         object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 queueEvent { renderer.zoom(detector.scaleFactor) }
+                return true
+            }
+        },
+    )
+
+    private val tapDetector = GestureDetector(
+        context,
+        object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapUp(e: MotionEvent): Boolean {
+                if (dragControlsLight) return false
+                val x = e.x
+                val y = e.y
+                queueEvent {
+                    val hit = renderer.pick(x, y)
+                    post { onPick?.invoke(hit) }
+                }
                 return true
             }
         },
@@ -49,7 +69,20 @@ class ModelGLSurfaceView @JvmOverloads constructor(
         queueEvent { renderer.dolly(amount) }
     }
 
+    fun explode(factor: Float = 1f) {
+        queueEvent { renderer.explode(factor) }
+    }
+
+    fun implode() {
+        queueEvent { renderer.implode() }
+    }
+
+    fun clearSelection() {
+        queueEvent { renderer.clearSelection() }
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        tapDetector.onTouchEvent(event)
         scaleDetector.onTouchEvent(event)
         if (scaleDetector.isInProgress) return true
         when (event.actionMasked) {
@@ -62,7 +95,6 @@ class ModelGLSurfaceView @JvmOverloads constructor(
                 val dy = event.y - lastY
                 lastX = event.x
                 lastY = event.y
-                // Object: (dx, dy). Light: flip Y only → (dx, -dy).
                 if (dragControlsLight) {
                     queueEvent { renderer.lightDrag(dx, -dy) }
                 } else {
@@ -108,6 +140,23 @@ class ModelGLSurfaceView @JvmOverloads constructor(
 
         fun dolly(amount: Float) {
             if (handle != 0L) CoreNative.glViewerDolly(handle, amount)
+        }
+
+        fun explode(factor: Float) {
+            if (handle != 0L) CoreNative.glViewerExplode(handle, factor)
+        }
+
+        fun implode() {
+            if (handle != 0L) CoreNative.glViewerImplode(handle)
+        }
+
+        fun pick(sx: Float, sy: Float): Int {
+            if (handle == 0L) return -1
+            return CoreNative.glViewerPick(handle, sx, sy)
+        }
+
+        fun clearSelection() {
+            if (handle != 0L) CoreNative.glViewerClearSelection(handle)
         }
 
         override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {

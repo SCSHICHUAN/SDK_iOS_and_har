@@ -266,6 +266,50 @@ ModelGLView.onTick
 
 ---
 
+## 工业交互：Explode / Pick
+
+爆炸视图 + 点击选取（零件级）。点击至少还要 **Ray**（屏幕→世界射线）。
+
+| 类 | 路径 | 作用 |
+|----|------|------|
+| **Explode** | `interaction/explode.h` | 零件沿相对中心方向拉开；`easeOutCubic` |
+| **Pick** | `interaction/pick.h` | 射线 vs 零件 AABB，维护 `selected()` |
+| **Ray** + **PartBounds** | `interaction/ray.h` | 点选依赖的射线与盒 |
+
+```text
+load → Explode::prepare(model) + Pick::prepare(model)
+爆炸：explode() / implode() → 每帧 tick(dt) → Draw 时乘 offsetMatrix(i)
+点选：Ray::fromScreen(sx,sy,w,h,invVP) → Pick::select(ray, modelMatrix [, explode])
+```
+
+C ABI：`core_gl_viewer_explode` / `implode` / `pick`；iOSpro：「爆炸」按钮 + 单击高亮。
+
+`Bounds`（`computeBounds`）仍只服务相机/居中；点选用零件 `PartBounds`，不要混用。
+
+### 拆分约定（当前实现）
+
+**按 Assimp 导入后的每个 mesh 为一件**，不做语义切分、也不做连通域再切。
+
+| 项 | 规则 |
+|----|------|
+| 零件单位 | `Model::meshes[i]`（与 glTF/FBX 的 mesh 一致） |
+| 爆炸方向 | 整模 AABB 中心 → 该 mesh AABB 中心（贴中心则 +Y） |
+| 位移量 | 约 `半径 × (0.35 + 0.65 × 离中心比例)`，再乘 `amount` |
+
+这是实时预览里常见的入门爆炸；**不是 CAD 装配爆炸图**（后者通常有零件 ID + 预设轴/距离表）。
+
+### 工业模型出模要求（要好看爆炸 / 可点选）
+
+资源侧按「一件一 mesh」导出，否则 SDK 无法拆开：
+
+1. **一件一 mesh**：车门、轮毂、刹车盘、内饰块等各自独立 mesh（可同节点下多个 mesh）。
+2. **禁止整车糊成一个 mesh**：单体网格爆炸几乎无效，点选也只能整坨选中。
+3. **命名建议**（便于以后做零件列表 / 高亮文案）：`Body_Door_FL`、`Wheel_RR` 等；当前 UI 只用下标，名字先留在资源里即可。
+4. **层级清晰**：装配树按子系统分组；爆炸仍按 mesh，Pick 的 AABB 跟 mesh 走。
+5. **若以后要正式爆炸图**：在资源或旁路 JSON 里给每件 `dir` + `distance`（或轴向），替换现在的「径向自动推」；类接口可仍走 `Explode::prepare` 读表。
+
+---
+
 ## 关键文件索引
 
 ```text
@@ -278,6 +322,10 @@ src/gl/
   renderer_data.{h,cpp}   数据袋
   viewport_input.{h,cpp}  手势与 load 后布局
   debut_sequence.h        入场
+  interaction/
+    explode.{h,cpp}       爆炸视图（easeOut）
+    pick.{h,cpp}          点击选取
+    ray.h                 射线 + PartBounds
   shaders/lighting-*.{vs,fs}
   Interface/gl_viewer.cpp C ABI 编排
 src/include/core/gl_viewer.h

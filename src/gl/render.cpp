@@ -9,6 +9,7 @@
 #include "gl_platform.h"
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -43,17 +44,17 @@ void applyLightingUniforms(RendererData& data, const glm::vec3& lightPos,
     data.shader.setFloat(base + ".quadratic", 0.0f);
   }
 
-  // 点光源「灯」：比刚才调暗，色卡仍生效；关则清零
+  // 点光源「灯」：再压一档，色卡仍生效；关则清零
   if (data.pointLightEnabled) {
-    const glm::vec3 diffuseColor = lampColor * 1.35f;
-    const glm::vec3 ambientColor = lampColor * 0.1f;
+    const glm::vec3 diffuseColor = lampColor * 0.85f;
+    const glm::vec3 ambientColor = lampColor * 0.05f;
     data.shader.setVec3("pointLights[3].position", lightPos);
     data.shader.setVec3("pointLights[3].ambient", ambientColor);
     data.shader.setVec3("pointLights[3].diffuse", diffuseColor);
-    data.shader.setVec3("pointLights[3].specular", lampColor * 1.0f);
+    data.shader.setVec3("pointLights[3].specular", lampColor * 0.55f);
     data.shader.setFloat("pointLights[3].constant", 1.0f);
-    data.shader.setFloat("pointLights[3].linear", 0.07f);
-    data.shader.setFloat("pointLights[3].quadratic", 0.022f);
+    data.shader.setFloat("pointLights[3].linear", 0.09f);
+    data.shader.setFloat("pointLights[3].quadratic", 0.032f);
   } else {
     data.shader.setVec3("pointLights[3].position", lightPos);
     data.shader.setVec3("pointLights[3].ambient", 0.0f, 0.0f, 0.0f);
@@ -64,22 +65,22 @@ void applyLightingUniforms(RendererData& data, const glm::vec3& lightPos,
     data.shader.setFloat("pointLights[3].quadratic", 0.0f);
   }
 
-  // 手电（聚光）：略提亮、锥角稍大、衰减更弱，避免发暗
+  // 手电（聚光）：压暗一档，锥角适中
   data.shader.setVec3("spotLight.position", data.camera.Position);
   data.shader.setVec3("spotLight.direction", data.camera.Front);
   data.shader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
   if (data.spotLightEnabled) {
-    data.shader.setVec3("spotLight.diffuse", 2.2f, 2.2f, 2.1f);
-    data.shader.setVec3("spotLight.specular", 1.6f, 1.6f, 1.5f);
+    data.shader.setVec3("spotLight.diffuse", 1.05f, 1.05f, 1.0f);
+    data.shader.setVec3("spotLight.specular", 0.7f, 0.7f, 0.65f);
   } else {
     data.shader.setVec3("spotLight.diffuse", 0.0f, 0.0f, 0.0f);
     data.shader.setVec3("spotLight.specular", 0.0f, 0.0f, 0.0f);
   }
   data.shader.setFloat("spotLight.constant", 1.0f);
-  data.shader.setFloat("spotLight.linear", 0.045f);
-  data.shader.setFloat("spotLight.quadratic", 0.012f);
-  data.shader.setFloat("spotLight.cutOff", glm::cos(glm::radians(18.0f)));
-  data.shader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(26.0f)));
+  data.shader.setFloat("spotLight.linear", 0.09f);
+  data.shader.setFloat("spotLight.quadratic", 0.028f);
+  data.shader.setFloat("spotLight.cutOff", glm::cos(glm::radians(15.0f)));
+  data.shader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(22.0f)));
 }
 
 void drawLightCube(RendererData& data, const glm::mat4& projection, const glm::mat4& view,
@@ -165,11 +166,27 @@ void Render::frame(RendererData& data, const std::map<int, glm::mat4>* boneMatri
     drawLightCube(data, projection, view, lightPos, lampColor);
   }
 
+  data.explode.tick(dt);
+
   data.shader.use();
   data.shader.setMat4("projection", projection);
   data.shader.setMat4("view", view);
-  data.shader.setMat4("model", model);
   applyLightingUniforms(data, lightPos, lampColor);
 
-  data.model.Draw(data.shader, boneMatrices);
+  // 分片画：每 mesh 可带爆炸位移 + 选中高亮
+  const int selected = data.pick.selected();
+  const bool doExplode = data.explode.prepared() && data.explode.amount() > 1e-5f;
+  for (size_t i = 0; i < data.model.meshes.size(); ++i) {
+    glm::mat4 meshModel = model;
+    if (doExplode) {
+      meshModel = model * data.explode.offsetMatrix(static_cast<int>(i));
+    }
+    data.shader.setMat4("model", meshModel);
+    data.shader.setFloat("selectBoost", (selected == static_cast<int>(i)) ? 1.0f : 0.0f);
+    data.model.meshes[i].Draw(data.shader, boneMatrices);
+  }
+
+  data.lastModel = model;
+  data.lastView = view;
+  data.lastProj = projection;
 }

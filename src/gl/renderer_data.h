@@ -12,8 +12,10 @@
 #include "arcball_mobile.h"
 #include "camera.h"
 #include "debut_sequence.h"
+#include "explode.h"
 #include "inertia.h"
 #include "model.h"
+#include "pick.h"
 #include "shader.h"
 
 #include <glm/glm.hpp>
@@ -28,9 +30,16 @@ class RendererData {
   ArcballMobile arcball;     // 模型旋转姿态
   Inertia inertia;           // 拖动/滑行位移队列
   DebutSequence debut;       // 加载后入场（推进 + 自转）
+  Explode explode;           // 爆炸视图
+  Pick pick;                 // 点击选取
 
   unsigned int lightCubeVAO = 0;  // 灯标记几何
   unsigned int lightCubeVBO = 0;
+
+  // 上一帧 MVP（点选 Ray::fromScreen 用）
+  glm::mat4 lastModel{1.0f};
+  glm::mat4 lastView{1.0f};
+  glm::mat4 lastProj{1.0f};
 
   int width = 1;             // 视口宽
   int height = 1;            // 视口高
