@@ -37,16 +37,16 @@ build_core_a() {
     -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY="${slice_dir}" \
     >&2
 
-  cmake --build "${cmake_dir}" --config Release -j"${JOBS}" >&2
+  cmake --build "${cmake_dir}" --config Release -j"${JOBS}" >&2 || {
+    echo "cmake --build failed for slice=${slice}" >&2
+    exit 1
+  }
 
-  # Always take newest cmake output (generators may nest under lib/ or Release/).
+  # Prefer freshly built artifact under cmake_dir (do not fall back to stale slice .a).
   local art
   art="$(find "${cmake_dir}" -name 'core.a' | head -n 1 || true)"
   if [[ -z "${art}" || ! -f "${art}" ]]; then
-    art="$(find "${slice_dir}" -name 'core.a' | head -n 1 || true)"
-  fi
-  if [[ -z "${art}" || ! -f "${art}" ]]; then
-    echo "core.a not found for slice=${slice}" >&2
+    echo "core.a not found after build for slice=${slice}" >&2
     exit 1
   fi
 

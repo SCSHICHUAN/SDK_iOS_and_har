@@ -158,6 +158,28 @@ void core_gl_viewer_light_move_x(CoreGlViewer* viewer, float amount);
  */
 void core_gl_viewer_light_drag(CoreGlViewer* viewer, float dx, float dy);
 
+/**
+ * 功能：查询当前模型里有多少条动画 clip（load 后有效）。
+ * 参数：
+ *   viewer — 实例句柄；NULL 返回 0
+ * 输入：viewer
+ * 返回：clip 数量；无模型 / 无动画 → 0
+ */
+int core_gl_viewer_animation_count(CoreGlViewer* viewer);
+
+/**
+ * 功能：选中并播放第 index 条动画（用户点「开始」时调这个）。
+ *       内部切到对应 Animation clip；之后每帧 render 里 Animator 插值骨矩阵。
+ *       load 成功后默认已播 index 0（若有动画）。
+ * 参数：
+ *   viewer    — 实例句柄，不可为 NULL
+ *   index     — clip 下标，范围 [0, animation_count)
+ *   resetTime — 非 0：播放头回到 0；0：接着当前时间（少用）
+ * 输入：viewer, index, resetTime
+ * 返回：0 成功；-1 viewer 非法或 index 无对应 clip
+ */
+int core_gl_viewer_play_animation(CoreGlViewer* viewer, int index, int resetTime);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

@@ -75,10 +75,10 @@ void main()
 {
     vec4 albedoSample = texture(material.diffuse, TexCoords);
     float outAlpha = 1.0;
-    vec3 albedo = albedoSample.rgb;
+    vec3 albedo = albedoSample.rgb * materialColor.rgb;
     vec3 specColor = vec3(texture(material.specular, TexCoords));
     if (hairSolidColor) {
-        // whiteMan 头发：无 diffuse，用发色常量
+        // 无 diffuse：用材质自带色；近黑时深棕兜底（与 AR 一致）
         albedo = materialColor.rgb;
         if (dot(albedo, vec3(1.0)) < 0.05) albedo = vec3(0.20, 0.14, 0.10);
         specColor = vec3(0.08);
@@ -91,8 +91,8 @@ void main()
         if (outAlpha < 0.1) discard;
         albedo = vec3(0.22, 0.18, 0.14);
         specColor = vec3(0.05);
-    } else if (albedoSample.a < 0.99) {
-        outAlpha = albedoSample.a;
+    } else {
+        outAlpha = albedoSample.a * materialColor.a;
         if (outAlpha < 0.08) discard;
     }
 

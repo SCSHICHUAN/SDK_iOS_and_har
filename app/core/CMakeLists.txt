@@ -69,7 +69,11 @@ if(CORE_ENABLE_GL)
   target_sources(core PRIVATE
     "${SDK_SRC_ROOT}/gl/Interface/gl_viewer.cpp"
     "${SDK_SRC_ROOT}/gl/renderer_data.cpp"
+    "${SDK_SRC_ROOT}/gl/render.cpp"
+    "${SDK_SRC_ROOT}/gl/viewport_input.cpp"
     "${SDK_SRC_ROOT}/gl/model.cpp"
+    "${SDK_SRC_ROOT}/gl/animation.cpp"
+    "${SDK_SRC_ROOT}/gl/animator.cpp"
     "${CORE_GL_EMBEDDED_SHADERS_H}"
   )
   target_include_directories(core

@@ -6,7 +6,14 @@
 import UIKit
 
 final class RootListViewController: UITableViewController {
-    private let rows = ["立方体"]
+    private let rows: [(title: String, asset: ModelBrowseAsset)] = [
+        ("立方体", .cube),
+        ("Wolf", .wolf),
+        ("SU7", .su7),
+        ("Benz", .benz),
+        ("白人", .whiteMan),
+        ("黑人", .blackMan),
+    ]
 
     init() {
         super.init(style: .insetGrouped)
@@ -30,7 +37,7 @@ final class RootListViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
         var config = cell.defaultContentConfiguration()
-        config.text = rows[indexPath.row]
+        config.text = rows[indexPath.row].title
         cell.contentConfiguration = config
         cell.accessoryType = .disclosureIndicator
         return cell
@@ -38,6 +45,10 @@ final class RootListViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        navigationController?.pushViewController(CubeViewController(), animated: true)
+        let item = rows[indexPath.row]
+        navigationController?.pushViewController(
+            CubeViewController(asset: item.asset),
+            animated: true
+        )
     }
 }

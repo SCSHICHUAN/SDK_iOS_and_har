@@ -85,6 +85,22 @@ app/
 - iOS：`.a` 直接装进 Framework → XCFramework（无打包工程）。
 - Android / 鸿蒙：`.a` 先链进 `.so`（JNI / NAPI），再打进 AAR / HAR（有打包工程）。
 
+### GLES 模型浏览器（`src/gl`）
+
+近两日（2026-11-18 ~ 11-19）在三端同一套静态库上落地：**Assimp 加载 → Mesh VAO → Animator 骨矩阵 → Render 分片画进 FBO → Pro present**。
+
+| 层 | 职责 |
+|----|------|
+| Pro | Context / FBO / DisplayLink / present（iOS `ModelGLView` 等） |
+| `CoreGlViewer` | C ABI 编排 load / 手势 / render |
+| `Model` + `Mesh` | 加载与绘制；静态节点 bake / 蒙皮权重 |
+| `Animation` + `Animator` | 关键帧存储 vs 每帧插值出骨矩阵 |
+| `Render` + `RendererData` | 清屏、MVP、光照、入场 `DebutSequence` |
+
+原理与坑（SU7 摆正、Benz 蒙皮 root、退页停 DisplayLink、骨骼一次上传）见：
+
+**[`src/gl/README.md`](src/gl/README.md)** — 架构设计、绘制流程、动画公式、生命周期。
+
 目录对应：
 
 ```

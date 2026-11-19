@@ -1,7 +1,9 @@
 //
 // gl_viewer.h — GLES 模型浏览器 C ABI（Swift / JNI / NAPI）
 //
-// 分层：本头文件 = 跨语言边界；RendererData = 一帧渲染；Pro = Surface/FBO。
+// 分层：本头文件 = 跨语言边界；
+//       RendererData = 场景静态数据；Render = 整帧提交；Animator = 播放；
+//       Pro = Surface/FBO。
 // 约定：create/load/render 前须 makeCurrent GLES3；viewer==NULL 安全空操作。
 //
 
@@ -14,7 +16,7 @@ extern "C" {
 
 /**
  * 不透明句柄。
- * 内部持有 RendererData（场景状态 + render）。
+ * 内部持有 RendererData + Animator；画帧走 Render::frame。
  */
 typedef struct CoreGlViewer CoreGlViewer;
 
@@ -72,7 +74,7 @@ void core_gl_viewer_resize(CoreGlViewer* viewer, int width, int height);
 
 /**
  * 功能：向当前绑定的 framebuffer 画一帧（Pro FBO 或默认 FB）。
- *       内含 inertia.tick → arcball.drag、相机、灯光、Model::Draw。
+ *       先 Animator 插值骨矩阵（若有动画），再 Render::frame(RendererData, …)。
  * 参数：
  *   viewer — 实例句柄；NULL 则空操作
  * 输入：viewer；当前 FBO / GLES 上下文须已就绪
@@ -157,6 +159,38 @@ void core_gl_viewer_light_move_x(CoreGlViewer* viewer, float amount);
  * 返回：无
  */
 void core_gl_viewer_light_drag(CoreGlViewer* viewer, float dx, float dy);
+
+/**
+ * 功能：查询当前模型里有多少条动画 clip（load 后有效）。
+ * 参数：
+ *   viewer — 实例句柄；NULL 返回 0
+ * 输入：viewer
+ * 返回：clip 数量；无模型 / 无动画 → 0
+ */
+int core_gl_viewer_animation_count(CoreGlViewer* viewer);
+
+/**
+ * 功能：取第 index 条动画的 Assimp 源名字（供下拉显示）。
+ * 参数：
+ *   viewer — 实例句柄；NULL 返回 NULL
+ *   index  — clip 下标，范围 [0, animation_count)
+ * 输入：viewer, index
+ * 返回：UTF-8 C 字符串指针（寿命随当前已 load 的 Model）；越界 / 无 → NULL
+ */
+const char* core_gl_viewer_animation_name(CoreGlViewer* viewer, int index);
+
+/**
+ * 功能：选中并播放第 index 条动画（用户点「开始」时调这个）。
+ *       内部切到对应 Animation clip；之后每帧 render 里 Animator 插值骨矩阵。
+ *       load 成功后默认已播 index 0（若有动画）。
+ * 参数：
+ *   viewer    — 实例句柄，不可为 NULL
+ *   index     — clip 下标，范围 [0, animation_count)
+ *   resetTime — 非 0：播放头回到 0；0：接着当前时间（少用）
+ * 输入：viewer, index, resetTime
+ * 返回：0 成功；-1 viewer 非法或 index 无对应 clip
+ */
+int core_gl_viewer_play_animation(CoreGlViewer* viewer, int index, int resetTime);
 
 #ifdef __cplusplus
 } /* extern "C" */

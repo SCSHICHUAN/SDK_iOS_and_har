@@ -84,3 +84,5 @@ debug/third_party/
 *.tmp
 *.temp
 .cache/
+# 本地拆贴图 / 抽帧等调试目录（非源码、非文档）
+.tmp_*/

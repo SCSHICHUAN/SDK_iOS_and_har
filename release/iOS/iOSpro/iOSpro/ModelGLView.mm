@@ -14,6 +14,7 @@
   CADisplayLink *_displayLink;
   CoreGlViewer *_viewer;
   CGFloat _lastPinch;
+  BOOL _shutDown;
 }
 
 @synthesize dragControlsLight = _dragControlsLight;
@@ -40,6 +41,7 @@
 
 - (void)commonInit {
   _dragControlsLight = NO;
+  _shutDown = NO;
   self.contentScaleFactor = UIScreen.mainScreen.scale;
   CAEAGLLayer *layer = (CAEAGLLayer *)self.layer;
   layer.opaque = YES;
@@ -67,17 +69,27 @@
       [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(onPinch:)];
   [self addGestureRecognizer:pinch];
 
-  _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(onTick:)];
-  [_displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
+  // DisplayLink 在 didMoveToWindow / resumeRendering 里创建，避免离屏仍跑
+}
+
+- (void)didMoveToWindow {
+  [super didMoveToWindow];
+  if (_shutDown) return;
+  if (self.window) {
+    [self resumeRendering];
+  } else {
+    // 离开窗口：必须 invalidate，否则 CADisplayLink 强引用 self → 退页后仍 60fps
+    [self pauseRendering];
+  }
 }
 
 - (void)layoutSubviews {
   [super layoutSubviews];
-  [self resizeStorage];
+  if (!_shutDown) [self resizeStorage];
 }
 
 - (void)resizeStorage {
-  if (!_context) return;
+  if (!_context || _shutDown) return;
   [EAGLContext setCurrentContext:_context];
 
   glBindFramebuffer(GL_FRAMEBUFFER, _framebuffer);
@@ -88,6 +100,7 @@
   GLint w = 0, h = 0;
   glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH, &w);
   glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &h);
+  if (w <= 0 || h <= 0) return;
 
   glBindRenderbuffer(GL_RENDERBUFFER, _depthRbo);
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
@@ -98,14 +111,66 @@
 }
 
 - (BOOL)loadModelAtPath:(NSString *)path {
-  if (!_context || !_viewer) return NO;
+  if (!_context || !_viewer || _shutDown) return NO;
   [EAGLContext setCurrentContext:_context];
   int rc = core_gl_viewer_load(_viewer, path.fileSystemRepresentation);
   return rc == 0;
 }
 
+- (NSInteger)animationCount {
+  if (!_viewer) return 0;
+  return (NSInteger)core_gl_viewer_animation_count(_viewer);
+}
+
+- (NSArray<NSString *> *)animationNames {
+  NSMutableArray<NSString *> *names = [NSMutableArray array];
+  if (!_viewer) return names;
+  const int n = core_gl_viewer_animation_count(_viewer);
+  for (int i = 0; i < n; ++i) {
+    const char *raw = core_gl_viewer_animation_name(_viewer, i);
+    NSString *label = raw ? [NSString stringWithUTF8String:raw]
+                          : [NSString stringWithFormat:@"Anim %d", i];
+    // FBX often uses "Armature|Walk" — show the last segment (same as AR).
+    NSRange pipe = [label rangeOfString:@"|" options:NSBackwardsSearch];
+    if (pipe.location != NSNotFound) {
+      label = [label substringFromIndex:pipe.location + 1];
+    }
+    [names addObject:label];
+  }
+  return names;
+}
+
+- (BOOL)playAnimationAtIndex:(NSInteger)index {
+  if (!_viewer) return NO;
+  return core_gl_viewer_play_animation(_viewer, (int)index, 1) == 0;
+}
+
 - (void)dolly:(float)amount {
   if (_viewer) core_gl_viewer_dolly(_viewer, amount);
+}
+
+- (void)cameraPan:(float)amount {
+  if (_viewer) core_gl_viewer_camera_pan(_viewer, amount);
+}
+
+- (void)lightDolly:(float)amount {
+  if (_viewer) core_gl_viewer_light_move_z(_viewer, amount);
+}
+
+- (void)setDirLightEnabled:(BOOL)enabled {
+  if (_viewer) core_gl_viewer_set_dir_light(_viewer, enabled ? 1 : 0);
+}
+
+- (void)setSpotLightEnabled:(BOOL)enabled {
+  if (_viewer) core_gl_viewer_set_spot_light(_viewer, enabled ? 1 : 0);
+}
+
+- (void)setPointLightEnabled:(BOOL)enabled {
+  if (_viewer) core_gl_viewer_set_point_light(_viewer, enabled ? 1 : 0);
+}
+
+- (void)setPointLightColorR:(float)r g:(float)g b:(float)b {
+  if (_viewer) core_gl_viewer_set_point_light_color(_viewer, r, g, b);
 }
 
 - (void)onPan:(UIPanGestureRecognizer *)gr {
@@ -138,7 +203,8 @@
 }
 
 - (void)onTick:(CADisplayLink *)link {
-  if (!_context || !_viewer) return;
+  (void)link;
+  if (!_context || !_viewer || _shutDown || !self.window) return;
   [EAGLContext setCurrentContext:_context];
   glBindFramebuffer(GL_FRAMEBUFFER, _framebuffer);
   core_gl_viewer_render(_viewer);
@@ -146,19 +212,54 @@
   [_context presentRenderbuffer:GL_RENDERBUFFER];
 }
 
-- (void)dealloc {
+- (void)pauseRendering {
   [_displayLink invalidate];
-  [EAGLContext setCurrentContext:_context];
-  if (_viewer) {
-    core_gl_viewer_destroy(_viewer);
-    _viewer = nullptr;
+  _displayLink = nil;
+}
+
+- (void)resumeRendering {
+  if (_shutDown || !_context) return;
+  if (_displayLink) {
+    _displayLink.paused = NO;
+    return;
   }
-  if (_framebuffer) glDeleteFramebuffers(1, &_framebuffer);
-  if (_colorRbo) glDeleteRenderbuffers(1, &_colorRbo);
-  if (_depthRbo) glDeleteRenderbuffers(1, &_depthRbo);
-  if ([EAGLContext currentContext] == _context) {
-    [EAGLContext setCurrentContext:nil];
+  _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(onTick:)];
+  // 优先与屏刷同步；大模型可再考虑降帧，先保证离屏必停
+  [_displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
+}
+
+- (void)shutdown {
+  if (_shutDown) return;
+  _shutDown = YES;
+  [self pauseRendering];
+
+  if (_context) {
+    [EAGLContext setCurrentContext:_context];
+    if (_viewer) {
+      core_gl_viewer_destroy(_viewer);
+      _viewer = nullptr;
+    }
+    if (_framebuffer) {
+      glDeleteFramebuffers(1, &_framebuffer);
+      _framebuffer = 0;
+    }
+    if (_colorRbo) {
+      glDeleteRenderbuffers(1, &_colorRbo);
+      _colorRbo = 0;
+    }
+    if (_depthRbo) {
+      glDeleteRenderbuffers(1, &_depthRbo);
+      _depthRbo = 0;
+    }
+    if ([EAGLContext currentContext] == _context) {
+      [EAGLContext setCurrentContext:nil];
+    }
   }
+  _context = nil;
+}
+
+- (void)dealloc {
+  [self shutdown];
 }
 
 @end

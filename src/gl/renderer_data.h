@@ -1,12 +1,9 @@
 //
-// renderer_data.h — same role as GL-ARKit/ARKit/GL/SCRendererData
-// Owns scene state and full-frame render(); calls Model::Draw for geometry.
+// renderer_data.h — RendererData：场景静态数据袋
 //
-// AR mapping (SDK core, no ARKit/host-video yet):
-//   SCRendererData     → RendererData
-//   Camera / Shader / Model / Mesh → same modules under src/gl/
-//   SCRenderer (UIView) → platform Pro app (e.g. iOSpro ModelGLView)
-//   C API              → include/core/gl_viewer.h (cross-language boundary)
+// 只放字段：Model / Shader / Camera / 灯 / 浏览姿态等。
+// 模型数据由 Model 加载；手势改字段见 viewport_input；整帧绘制见 render。
+// 本文件只负责 init（shader/灯缓冲）与 destroy。
 //
 
 #ifndef CORE_GL_RENDERER_DATA_H_
@@ -14,77 +11,72 @@
 
 #include "arcball_mobile.h"
 #include "camera.h"
+#include "debut_sequence.h"
 #include "inertia.h"
 #include "model.h"
 #include "shader.h"
 
-#include <string>
+#include <glm/glm.hpp>
 
 class RendererData {
  public:
-  RendererData();
-  ~RendererData();
+  // —— members（静态场景状态）——
+  Model model;              // 已加载网格/动画资源
+  Shader shader;             // 模型 lighting program
+  Shader lampShader;         // 灯立方体 program
+  Camera camera;             // 观察相机
+  ArcballMobile arcball;     // 模型旋转姿态
+  Inertia inertia;           // 拖动/滑行位移队列
+  DebutSequence debut;       // 加载后入场（推进 + 自转）
+
+  unsigned int lightCubeVAO = 0;  // 灯标记几何
+  unsigned int lightCubeVBO = 0;
+
+  int width = 1;             // 视口宽
+  int height = 1;            // 视口高
+  float camYaw = 30.0f;      // 相机轨道偏航
+  float camPitch = 20.0f;    // 相机轨道俯仰
+  float distance = 3.0f;     // 相机到模型中心距离（模型已按 modelScale 归一化）
+  float camPan = 0.0f;       // 相机左右平移（沿水平 Right，改观察位置）
+  float modelScale = 1.0f;   // 显示缩放：1/radius，FBX 大单位（如 Wolf）才能进画面
+  float lightX = -0.4f;      // 点光源位置（世界坐标）
+  float lightY = 1.15f;
+  float lightZ = 0.0f;
+  bool pointLightEnabled = true;          // 「灯」点光源开关
+  glm::vec3 pointLightColor{1.0f, 1.0f, 1.0f};  // 色卡：红/黄/天蓝/白
+  bool dirLightEnabled = true;   // 太阳（平行光）
+  bool spotLightEnabled = true;  // 手电（聚光，跟相机）
+  float elapsed = 0.0f;      // 累计时间
+  bool ready = false;        // init 是否成功
+
+  // —— methods（仅资源生命周期）——
+  RendererData() = default;
+  ~RendererData() { destroy(); }
 
   RendererData(const RendererData&) = delete;
   RendererData& operator=(const RendererData&) = delete;
 
-  /** Context must be current. Builds default model shader. */
+  /**
+   * 功能：编译 shader、创建灯立方体缓冲，启用深度测试。
+   * 参数：无
+   * 输入：须 GLES Context 已 current
+   * 返回：true 成功；false shader 失败
+   */
   bool init();
+
+  /**
+   * 功能：释放 model/shader/灯 VAO，ready=false。
+   * 参数/输入：无
+   * 返回：无
+   */
   void destroy();
 
-  bool loadModel(const std::string& path);
-  bool loadModelFromMemory(const void* data, size_t size, const char* hint = ".obj");
-  bool hasModel() const { return model_.loaded(); }
-
-  void resize(int width, int height);
-  /** Touch-drag: mobile tumble rotates the model (camera + lamp stay put). */
-  void onOrbit(float dx, float dy);
-  /** Finger up — next orbit re-seeds OA on the virtual sphere. */
-  void onOrbitEnd();
   /**
-   * 浏览手感（两参数互不依赖，对标 Sketchfab）：
-   * @param sensitivity  OrbitControls rotateSpeed（默认 1：一屏高≈一圈）
-   * @param brakeFactor  仅松手刹车（默认 0.10）：↑ 刹得越快，不影响拖动
+   * 功能：是否已有可画网格。
+   * 参数/输入：无
+   * 返回：model.loaded()
    */
-  void setOrbitFeel(float sensitivity, float brakeFactor);
-  /** Pinch: scale > 1 zooms in. */
-  void onPinch(float scale);
-  /** Dolly along view: amount > 0 moves camera forward (closer). */
-  void onDolly(float amount);
-  /** Move point light on X: amount > 0 → right. */
-  void onLightMoveX(float amount);
-  /** Drag point light in XY (screen-style deltas from Pro). */
-  void onLightDrag(float dx, float dy);
-  /** One frame into the currently bound framebuffer. */
-  void render();
-
- private:
-  void applyLightingUniforms(const glm::vec3& lightPos, const glm::vec3& lampColor);
-  void initLightCube();
-  void destroyLightCube();
-  void drawLightCube(const glm::mat4& projection, const glm::mat4& view,
-                     const glm::vec3& lightPos, const glm::vec3& lampColor);
-
-  Model model_;
-  Shader shader_;
-  Shader lampShader_;
-  Camera camera_;
-  /** Trial: ArcballMobile (Arcball + axis.z=0). Swap to Arcball to compare. */
-  ArcballMobile arcball_;
-  Inertia inertia_;
-  unsigned int lightCubeVAO_ = 0;
-  unsigned int lightCubeVBO_ = 0;
-  int width_ = 1;
-  int height_ = 1;
-  /** Fixed camera orbit angles (not driven by touch). */
-  float camYaw_ = 30.0f;
-  float camPitch_ = 20.0f;
-  float distance_ = 3.0f;
-  float lightX_ = -0.4f;
-  float lightY_ = 1.15f;
-  float lightZ_ = 0.0f;
-  float elapsed_ = 0.0f;
-  bool ready_ = false;
+  bool hasModel() const { return model.loaded(); }
 };
 
 #endif /* CORE_GL_RENDERER_DATA_H_ */
